@@ -35,6 +35,12 @@
         "default_nodes": 1
     },
 
+    // Remote monitoring via kite-client (optional)
+    "remote_monitor": {
+        "remote_url": "https://cloud-16.agent-matrix.com",
+        "api_key": "test-secret-api-key"
+    },
+
     // SSH runner config (required when runner = "ssh")
     "ssh": {
         "hosts": [

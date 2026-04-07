@@ -73,12 +73,10 @@ class SshExperimentSubagent(ExperimentSubagent):
 
     def _build_launch_command(self, blueprint_path: str, session_name: str) -> str:
         project_root = config["paths"]["project_root"]
-        uv_cache = config["paths"].get("uv_cache", "")
         still_training = f"/tmp/still_training_{session_name}"
 
         setup = ""
-        if uv_cache:
-            setup = f"rm -rf /root/.local/share/uv && ln -s {uv_cache} /root/.local/share/uv && "
+        print(f"Running in tmux window: {session_name}")
 
         return dedent(f"""\
             {setup}\\
@@ -115,8 +113,6 @@ class SshExperimentSubagent(ExperimentSubagent):
 
     def launch(self, blueprint_path: str, exp_name: str) -> str:
         host_cfg = self._pick_host()
-        if host_cfg["host"] in ("localhost", "127.0.0.1", "::1"):
-            _setup_localhost_ssh()
         blueprint_path = os.path.abspath(blueprint_path)
         session_name = _tmux_session_name(blueprint_path)
         launch_cmd = self._build_launch_command(blueprint_path, session_name)
@@ -124,9 +120,14 @@ class SshExperimentSubagent(ExperimentSubagent):
         print(f"[ssh_runner] Launching {session_name} on {host_cfg['host']}...")
         result = _run_cmd(host_cfg, launch_cmd)
         if result.returncode != 0:
-            print(f"[ssh_runner] stdout: {result.stdout}")
-            print(f"[ssh_runner] stderr: {result.stderr}")
-            raise RuntimeError(f"Launch failed on {host_cfg['host']}: {result.stderr}")
+            if host_cfg["host"] in ("localhost", "127.0.0.1", "::1"):
+                print(f"[ssh_runner] SSH to localhost failed, setting up password-free SSH...")
+                _setup_localhost_ssh()
+                result = _run_cmd(host_cfg, launch_cmd)
+            if result.returncode != 0:
+                print(f"[ssh_runner] stdout: {result.stdout}")
+                print(f"[ssh_runner] stderr: {result.stderr}")
+                raise RuntimeError(f"Launch failed on {host_cfg['host']}: {result.stderr}")
 
         job_id = self._job_id(host_cfg, blueprint_path, session_name)
         print(f"[ssh_runner] Launched: {job_id}")

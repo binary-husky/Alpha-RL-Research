@@ -13,5 +13,5 @@ python -m rl_auto_research.opencode_runner leader --research-topic="research_top
 # plan first
 python -m rl_auto_research.opencode_runner leader --research-topic="research_topic/example_02_kl_abl.md" --only-run-planning --skip-permissions
 # confirm execution
-python -m rl_auto_research.opencode_runner leader --research-topic="research_topic/example_02_kl_abl.md" --resume --skip-permissions
+python -m rl_auto_research.opencode_runner leader --research-topic="research_topic/example_02_kl_abl.md" --resume --resume-instruction="permission granted, begin research" --skip-permissions
 

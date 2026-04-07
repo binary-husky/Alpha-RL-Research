@@ -161,6 +161,7 @@ Every 10 minutes (sleep 600):
 
 ## How to Stop Experiments:
 
+- Think twice when you terminate a experiment!
 - Run `python -m rl_auto_research.blueprint_runner.stop_jobs --stop-job-id=<job_id>` to stop a running job
 - Multiple jobs: `python -m rl_auto_research.blueprint_runner.stop_jobs --stop-job-id=<id1> --stop-job-id=<id2>`
 - To also delete after stopping: add `--delete`

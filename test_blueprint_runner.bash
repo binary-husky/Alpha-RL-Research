@@ -1,0 +1,1 @@
+python -m rl_auto_research.blueprint_runner.blueprint_runner --blueprint=subject_ajet_kl_study/exp_stage_0/blueprints/blueprint_1.md

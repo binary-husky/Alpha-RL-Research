@@ -1,0 +1,5 @@
+alibabacloud_tea_openapi
+alibabacloud_credentials
+alibabacloud_pai_dlc20201203
+alibabacloud_aiworkspace20210204
+kite-strings

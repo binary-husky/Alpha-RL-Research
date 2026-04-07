@@ -106,6 +106,11 @@ def _is_opencode_web_running() -> bool:
     return result.returncode == 0
 
 
+def _is_kite_client_running() -> bool:
+    result = subprocess.run(["pgrep", "-f", "kite-client"], capture_output=True, text=True)
+    return result.returncode == 0
+
+
 def _ensure_opencode_web(skip_permissions=False):
     if not _is_opencode_web_running():
         env = None
@@ -115,6 +120,24 @@ def _ensure_opencode_web(skip_permissions=False):
         print("[controller message]: Starting opencode web...")
         subprocess.Popen(["opencode", "web"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env)
         time.sleep(2)
+
+    # Start kite-client for remote monitoring if configured
+    if not _is_kite_client_running():
+        from rl_auto_research.config import config
+        remote_cfg = config.get("remote_monitor", {})
+        remote_url = remote_cfg.get("remote_url")
+        api_key = remote_cfg.get("api_key")
+        if remote_url and api_key:
+            print(f"[controller message]: Starting kite-client -> {remote_url}")
+            subprocess.Popen(   # `pip install kite-strings` to get kite-client CLI tool
+                ["kite-client", "--server", remote_url, "--apikey", api_key, "--map", "4096:opencode_web"],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            )
+            time.sleep(2)
+            print("[controller message]: kite-client started for remote monitoring.")
+        else:
+            time.sleep(2)
+            print("[controller message]: remote_monitor config not found, skipping kite-client startup.")
 
 
 # ---------------------------------------------------------------------------
