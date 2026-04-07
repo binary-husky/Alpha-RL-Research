@@ -2,6 +2,9 @@
     // Copy this file to research_config.jsonc and fill in real values.
     // research_config.jsonc is gitignored — never commit it.
 
+    // Runner backend: "pai" or "ssh"
+    "runner": "pai",
+
     // Paths
     "paths": {
         "user_home": "/your/home/path",
@@ -9,7 +12,7 @@
         "uv_cache": "/your/home/path/root/.local/share/uv"
     },
 
-    // Alibaba Cloud PAI
+    // Alibaba Cloud PAI (required when runner = "pai")
     "alibaba_cloud": {
         "access_key_id": "YOUR_ACCESS_KEY_ID",
         "access_key_secret": "YOUR_ACCESS_KEY_SECRET",
@@ -24,11 +27,22 @@
         "benchmark_access_token": "YOUR_BENCHMARK_TOKEN"
     },
 
-    // PAI DLC job template defaults
+    // PAI DLC job template defaults (required when runner = "pai")
     "pai_job_template": {
         "clone_target": "template-v2",
         "clone_target_time_range": ["2026-03-29T00:00:00.000Z", "2026-04-05T20:11:00.000Z"],
         "default_priority": 5,
         "default_nodes": 1
+    },
+
+    // SSH runner config (required when runner = "ssh")
+    "ssh": {
+        "hosts": [
+            {
+                "host": "127.0.0.1",
+                "port": 22,
+                "user": "root"
+            }
+        ]
     }
 }

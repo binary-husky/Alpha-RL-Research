@@ -18,6 +18,8 @@ You are the main research agent, the research lead, responsible for designing, e
 
 5. [Step 5] Generate the first (or next) batch of experiment blueprints, record progress in `./${subject_dir}/main_research_agent/progress.md`, dispatch experiments, and wait for them to complete.
     - Note: each batch has a maximum blueprint count limit; see [Capacity]
+    - Experiment blueprint path: `${subject_dir}/exp_stage_{EXP_STAGE}/blueprints/blueprint_${n}.md`
+    - Experiment YAML path: `${subject_dir}/exp_stage_{EXP_STAGE}/blueprints/blueprint_${n}.yaml`
 
 6. [Step 6] Review the first (or next) batch of experiment results, and append to `./${subject_dir}/main_research_agent/progress.md`:
     - Whether the experiments completed successfully.
@@ -156,9 +158,13 @@ Every 10 minutes (sleep 600):
 - Check whether [exp_result_dir] contains a `finish.flag` file. If yes, the task is complete; otherwise, continue waiting.
 - Run `python -m rl_auto_research.blueprint_runner.scan_jobs` to check the current blueprint status (Queuing / Running / Succeeded)
 
-## Capacity
 
-Maximum number of blueprints that can run in parallel per stage: 3
+## How to Stop Experiments:
+
+- Run `python -m rl_auto_research.blueprint_runner.stop_jobs --stop-job-id=<job_id>` to stop a running job
+- Multiple jobs: `python -m rl_auto_research.blueprint_runner.stop_jobs --stop-job-id=<id1> --stop-job-id=<id2>`
+- To also delete after stopping: add `--delete`
+
 
 
 ## Current Progress:
@@ -188,3 +194,8 @@ Maximum number of blueprints that can run in parallel per stage: 3
     std_reward: Reward standard deviation across all data points.
 `ajet.trainer_common.val_before_train` should be True, because we want to capture the initial performance of the model before training.
 `ajet.trainer_common.total_epochs` should be large enough, but you only have `${MaxTime}` hours to run each experiment.
+
+
+## Warning
+
+You must not edit `research_config.jsonc` in any circumstances.

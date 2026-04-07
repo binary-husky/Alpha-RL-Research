@@ -251,3 +251,7 @@ You must ensure the experiment continues running throughout the [exp_max_time] p
 ```
 
 
+
+## Warning
+
+You must not edit `research_config.jsonc` in any circumstances.

@@ -136,6 +136,20 @@ def list_jobs(
     return results
 
 
+def stop_job(region_id: str, job_id: str):
+    """Stop a running/queuing job."""
+    client = _get_dlc_client(region_id)
+    client.stop_job(job_id)
+    print(f"Stopped job: {job_id}")
+
+
+def delete_job(region_id: str, job_id: str):
+    """Delete a job."""
+    client = _get_dlc_client(region_id)
+    client.delete_job(job_id)
+    print(f"Deleted job: {job_id}")
+
+
 def wait_for_job(region_id: str, job_id: str, poll_interval: float = 5.0) -> str:
     """Block until job reaches a terminal state. Returns status string."""
     client = _get_dlc_client(region_id)

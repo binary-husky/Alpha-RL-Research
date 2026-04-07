@@ -6,6 +6,7 @@ topics/
 subjects/
 codebase/
 scripts/
+research_topic/
 
 # Python
 __pycache__/
@@ -15,3 +16,5 @@ __pycache__/
 
 # OS
 .DS_Store
+subject*
+*.running_flag

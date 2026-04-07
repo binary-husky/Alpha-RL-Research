@@ -40,19 +40,52 @@ def _get_latest_opencode_session_id() -> str | None:
     return latest["id"]
 
 
+def _prepare_yolo_config():
+    """Copy opencode.json to opencode-yolo.json with permissive permissions."""
+    config_dir = os.path.expanduser("~/.config/opencode")
+    src = os.path.join(config_dir, "opencode.json")
+    dst = os.path.join(config_dir, "opencode-yolo.json")
+
+    if os.path.exists(src):
+        with open(src, "r") as f:
+            config = json.load(f)
+    else:
+        config = {"$schema": "https://opencode.ai/config.json"}
+
+    config["permission"] = {"*": {"*": "allow"}}
+
+    os.makedirs(config_dir, exist_ok=True)
+    with open(dst, "w") as f:
+        json.dump(config, f, indent=2)
+
+    return dst
+
+
 def run_opencode(args: list[str], *, continue_mode=False, session_id=None,
-                 need_permission_error_fix=False) -> tuple[int, bool]:
+                 need_permission_error_fix=False, resume_instruction="",
+                 skip_permissions=False) -> tuple[int, bool]:
     cmd = ["opencode"] + args
 
     if continue_mode:
         cmd = cmd[:-1]  # drop the original prompt
-        msg = "continue your job"
+
+        if resume_instruction:
+            msg = f"Instruction: {resume_instruction}"
+        else:
+            msg = "continue your job"
+
         if need_permission_error_fix:
             msg += ", permission error detected, please try some workaround, e.g. tmux command."
         cmd += ["-c", session_id, msg]
 
+    env = None
+    if skip_permissions:
+        yolo_config = _prepare_yolo_config()
+        env = {**os.environ, "OPENCODE_CONFIG": yolo_config}
+
     print("[controller message]: executing", " ".join(cmd))
-    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    print("[controller message]: using envs", env)
+    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=env)
 
     terminated_due_to_permission = False
     for stream in (process.stdout, process.stderr):
@@ -73,10 +106,14 @@ def _is_opencode_web_running() -> bool:
     return result.returncode == 0
 
 
-def _ensure_opencode_web():
+def _ensure_opencode_web(skip_permissions=False):
     if not _is_opencode_web_running():
+        env = None
+        if skip_permissions:
+            yolo_config = _prepare_yolo_config()
+            env = {**os.environ, "OPENCODE_CONFIG": yolo_config}
         print("[controller message]: Starting opencode web...")
-        subprocess.Popen(["opencode", "web"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.Popen(["opencode", "web"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env)
         time.sleep(2)
 
 
@@ -94,13 +131,22 @@ def _should_continue(terminated_due_to_permission: bool, running_flag: str) -> b
         return False
 
 
-def run(research_topic: str = "", blueprint:str="", mod: str = ""):
+def run(research_topic: str = "", blueprint:str="", mod: str = "", resume_latest_session: bool = False, resume_instruction: str = "", only_run_planning: bool = False, skip_permissions: bool = False) -> int:
+
+    if only_run_planning:
+        assert mod == "leader", "only_run_planning mode is only applicable for leader mode"
 
     if mod == "leader":
         leader_skill_path = "skills/leader_experiment.md"
         leader_skill_path = os.path.abspath(leader_skill_path)
         assert os.path.exists(leader_skill_path), f"skill not found: {leader_skill_path}"
-        running_flag = leader_skill_path + ".running_flag"
+
+        if os.path.exists(research_topic):
+            running_flag = research_topic + ".running_flag"
+            with open(research_topic, "r") as f:
+                research_topic = f"Research topic:\n{f.read()}"
+        else:
+            running_flag = leader_skill_path + ".running_flag"
 
         with open(running_flag, "w+") as f:
             f.write("Running")
@@ -112,26 +158,39 @@ def run(research_topic: str = "", blueprint:str="", mod: str = ""):
             f"{research_topic}\n"
         )
 
+        if only_run_planning:
+            prompt += "Only generate the research plan and exit without running the experiments."
+
     elif mod == "worker":
         worker_skill_path = "skills/worker_experiment.md"
         worker_skill_path = os.path.abspath(worker_skill_path)
+        worker_blueprint_path = os.path.abspath(blueprint)
         assert os.path.exists(worker_skill_path), f"skill not found: {worker_skill_path}"
-        running_flag = worker_skill_path + ".running_flag"
+        assert os.path.exists(worker_blueprint_path), f"blueprint not found: {worker_blueprint_path}"
+        running_flag = worker_blueprint_path + ".running_flag"
 
         with open(running_flag, "w+") as f:
             f.write("Running")
 
         prompt = (
-            f"Your task is to follow the instructions in {worker_skill_path} and complete the experiment described in blueprint {blueprint}.\n"
+            f"Your task is to follow the instructions in {worker_skill_path} and complete the experiment described in blueprint {worker_blueprint_path}.\n"
             f"After the experiment is finally complete, please delete {running_flag}.\n"
             f"Try everything you can to make the experiment running until reaching the time limit or completing the goal written in the blueprint.\n"
         )
 
-    _ensure_opencode_web()
+    assert not (resume_latest_session and only_run_planning), "resume_latest_session and only_run_planning cannot be both True"
+
+    _ensure_opencode_web(skip_permissions=skip_permissions)
     run_args = ["run", f"--attach=http://localhost:4096", prompt]
 
     print("[controller message]: run opencode 1st ...")
-    returncode, terminated_due_to_permission = run_opencode(run_args)
+    if resume_latest_session:
+        terminated_due_to_permission = False
+    else:
+        returncode, terminated_due_to_permission = run_opencode(run_args, skip_permissions=skip_permissions)
+        if only_run_planning:
+            return returncode
+
 
     # begin opencode agent
     while _should_continue(terminated_due_to_permission, running_flag):
@@ -141,7 +200,10 @@ def run(research_topic: str = "", blueprint:str="", mod: str = ""):
             returncode, terminated_due_to_permission = run_opencode(
                 run_args, continue_mode=True, session_id=session_id,
                 need_permission_error_fix=terminated_due_to_permission,
+                resume_instruction=resume_instruction,
+                skip_permissions=skip_permissions,
             )
+            resume_instruction = ""  # only apply the resume_instruction for one time
 
     if mod == "worker":
         still_training = "/still_training"
@@ -161,16 +223,26 @@ def main():
     parser = argparse.ArgumentParser(prog="opencode_runner")
     subparsers = parser.add_subparsers(dest="mode", required=True)
 
-    # Leader
-    lp = subparsers.add_parser("leader")
-    lp.add_argument("--research-topic", default="", help="Extra instruction")
-
-    # Worker
-    wp = subparsers.add_parser("worker")
-    wp.add_argument("--blueprint", default="", help="Path to research skill .md")
+    # Common arguments
+    for sp_name in ("leader", "worker"):
+        sp = subparsers.add_parser(sp_name)
+        sp.add_argument("--research-topic", default="", help="Extra instruction")
+        sp.add_argument("--blueprint", default="", help="Path to research skill .md")
+        sp.add_argument("--resume", "--resume-latest-session", action="store_true", dest="resume_latest_session", help="Resume the latest session")
+        sp.add_argument("--resume-instruction", default="", help="Instruction for resuming")
+        sp.add_argument("--only-run-planning", action="store_true", help="Run once and exit")
+        sp.add_argument("--skip-permissions", action="store_true", help="Use permissive opencode config (allow all tools)")
     args = parser.parse_args()
 
-    rc = run(args.research_topic, args.blueprint, args.mode)
+    rc = run(
+        research_topic=args.research_topic,
+        blueprint=args.blueprint,
+        mod=args.mode,
+        resume_latest_session=args.resume_latest_session,
+        resume_instruction=args.resume_instruction,
+        only_run_planning=args.only_run_planning,
+        skip_permissions=args.skip_permissions,
+    )
     sys.exit(rc)
 
 
