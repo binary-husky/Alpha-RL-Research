@@ -9,7 +9,6 @@
     "paths": {
         "user_home": "/your/home/path",
         "project_root": "/your/home/path/rl_auto_research_v2",
-        "uv_cache": "/your/home/path/root/.local/share/uv"
     },
 
     // Alibaba Cloud PAI (required when runner = "pai")

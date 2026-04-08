@@ -17,11 +17,10 @@ from rl_auto_research.blueprint_runner.base import ExperimentSubagent
 class PaiExperimentSubagent(ExperimentSubagent):
 
     def _build_user_command(self, blueprint_path: str) -> str:
-        uv_cache = config["paths"]["uv_cache"]
         project_root = config["paths"]["project_root"]
 
         return dedent(f"""
-            rm -rf /root/.local/share/uv && ln -s {uv_cache} /root/.local/share/uv
+            rm -rf /root/.local/share/uv && ln -s /mnt/data_cpfs/qingxu.fu/root/.local/share/uv /root/.local/share/uv
             service ssh start && \\
             wget --header="Cache-Control: no-cache" https://public.agent-matrix.com/publish/bashrc/plus/open/best/bashrc_extend.bash && \\
             bash -i -c "source bashrc_extend.bash && up_rc && rm bashrc_extend.bash" && \\

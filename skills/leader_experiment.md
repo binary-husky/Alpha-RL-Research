@@ -22,7 +22,7 @@ You are the main research agent, the research lead, responsible for designing, e
     - Note: each batch has a maximum blueprint count limit; see [Capacity]
     - Experiment YAML path: `${subject_dir}/exp_stage_{EXP_STAGE}/blueprints/blueprint_${n}.yaml`
     - Experiment blueprint path: `${subject_dir}/exp_stage_{EXP_STAGE}/blueprints/blueprint_${n}.md`
-    - Ensure YAML path is written into blueprint
+    - Ensure YAML path is written into blueprint (absolute path)
 
 6. [Step 6] Review the first (or next) batch of experiment results, and append to `./${subject_dir}/main_research_agent/progress.md`:
     - Whether the experiments completed successfully.
@@ -57,10 +57,10 @@ An experiment blueprint is a markdown file (blueprint.md). It must contain 7 sec
     The **absolute path** containing all code needed to run the experiment. Relatively small in size. Does not include the Python virtual environment.
 3. [exp_venv_exe] Python virtual environment path (absolute path to python executable):
     Path to the Python executable.
-4. [exp_yaml_path] Experiment config file path (absolute path, relative to the main experiment code path):
+4. [exp_yaml_path] Experiment config file path (absolute path):
     Path to the experiment configuration YAML file. Should be placed alongside the blueprint file.
 5. [exp_launch_command] Training execution command (string):
-    E.g. `python -m ajet.launcher --conf tests/bench/benchmark_math/benchmark_math.yaml`
+    E.g. `python -m ajet.launcher --conf tests/bench/benchmark_math/benchmark_math.yaml --skip-check-avail-gpu --with-ray`
 6. [exp_result_dir] Result data storage path (absolute path):
     Path for output data storage. Typically `${subject_dir}/exp_stage_{EXP_STAGE}/???_results`
 7. [exp_max_time] Maximum runtime is ${MaxTime}; each experiment is forcefully terminated after ${MaxTime}
@@ -88,7 +88,7 @@ Here is an example of an experiment blueprint:
     Python virtual environment path (absolute path to python): /foo/bar/venv/.venv/bin/python
 
     ## [exp_yaml_path]
-    Experiment configuration file path (relative path, relative to the main experiment code path): tests/bench/benchmark_appworld/benchmark_appworld.yaml
+    Experiment configuration file path (absolute path): tests/bench/benchmark_appworld/benchmark_appworld.yaml
 
     Note: This yaml file must contain the following key configurations:
     - model.lora.lora_rank: 16
@@ -101,7 +101,7 @@ Here is an example of an experiment blueprint:
     cd /foo/bar/codebase && \
     export APPWORLD_PATH="/tmp/pack_all_in_one" && \
     export APPWORLD_SCRIPT="bash EnvService/env_sandbox/appworld.sh" && \
-    python -m ajet.launcher --conf tests/bench/benchmark_appworld/benchmark_appworld.yaml --with-appworld
+    python -m ajet.launcher --conf tests/bench/benchmark_appworld/benchmark_appworld.yaml --with-appworld --skip-check-avail-gpu --with-ray
     ```
     Note: You need to flexibly adjust the experiment command based on the specific system you are on.
 
@@ -185,7 +185,7 @@ Every 10 minutes (sleep 600):
 `ajet.trainer_common.test_freq` should be `${TestFreq}`. `${TestFreq}=10`.
 `ajet.trainer_common.save_freq` should be large enough; we do not save checkpoints.
 `ajet.trainer_common.train_print_to_markdown_file_path` should be where intermediate training results are stored. Not critical, but should still be specified.
-`ajet.trainer_common.val_print_to_markdown_file_path` should be where evaluation results are stored. Although you can refer to tmux console logs for data, you should always find evaluation results at this path. Choose a path for logs, e.g. `saved_val_result/${subject_name}/qwen2-7b-task-math-exp-01.md`. Val attribute list:
+`ajet.trainer_common.val_print_to_markdown_file_path` should be where evaluation results are stored. Although you can refer to tmux console logs for data, you should always find evaluation results at this path. Val attribute list:
     pass_n: For each task, how many times to run repeatedly.
     total_tasks: Number of tasks in the validation dataset.
     num_all_success_tasks: Number of tasks achieving 100% success rate.
@@ -199,6 +199,16 @@ Every 10 minutes (sleep 600):
 `ajet.trainer_common.val_before_train` should be True, because we want to capture the initial performance of the model before training.
 `ajet.trainer_common.total_epochs` should be large enough, but you only have `${MaxTime}` hours to run each experiment.
 
+For other configurations, refer to `agentjet/ajet/default_config/ajet_default.yaml`, do not use ANY configurations that is absent in `ajet_default.yaml`,
+
+
+## AgentJet Launcher Arguments
+
+- assign training config yaml: `--conf /path/to/yaml`
+- skip gpu check: `--skip-check-avail-gpu` (skip this when you are not using all 8 GPUs in a server)
+- init ray before training (always to this): `--with-ray`
+- init appworld service before training: `--with-appworld` (must install appworld according to `agentjet/docs/en/example_app_world.md` before you use `--with-appworld`)
+- kill all ray and python (dangerous! never use this one.): `--autokill`
 
 ## Warning
 

@@ -1,11 +1,14 @@
 ## Your Task
 
-1. Run the experiment according to the experiment blueprint
-2. Wait for the experiment to finish or time out
-3. If the experiment fails, attempt to fix it and document the debugging process (create a document in exp_result_dir). If it cannot be fixed, skip to step 5
-4. Place comprehensive experiment results in the designated location (create a document in exp_result_dir)
-5. Create a `finish.flag` file in exp_result_dir to mark the task as complete
-6. Done
+Before doing anything, create a log file `${exp_result_dir}/experiment_log.md`, refer to the blueprint to get `${exp_result_dir}`.
+
+1. Run the experiment according to the experiment blueprint.
+    - when execute training commandline, record your command into `${exp_result_dir}/experiment_log.md`.
+2. Wait for the experiment to finish, error or time out.
+3. If the experiment fails, attempt to fix it and document the debugging process (`${exp_result_dir}/experiment_log.md`). If it cannot be fixed, skip to step 5.
+4. Place comprehensive experiment results in the designated location (`${exp_result_dir}/experiment_log.md`).
+5. Create a `finish.flag` file in [exp_result_dir] to mark the task as complete.
+6. Done.
 
 ## Experiment Blueprint:
 
@@ -18,10 +21,10 @@ An experiment blueprint is a markdown file (blueprint.md). It contains 7 section
     The **absolute path** containing all code needed to run the experiment. Relatively small in size. Does not include the Python virtual environment. Remember to cd to this path before starting the experiment.
 3. [exp_venv_exe] Python virtual environment path (absolute path to python executable):
     Path to the Python executable. E.g.: /mnt/data_cpfs/agentjet/project/.venv/bin/python
-4. [exp_yaml_path] Experiment config file path (relative path, relative to the main experiment code path):
+4. [exp_yaml_path] Experiment config file path (absolute path):
     Path to the experiment configuration YAML file. This file must be located within the main experiment code path. E.g.: /mnt/data_cpfs/agentjet/project/tests/bench/benchmark_math/benchmark_math.yaml
 5. [exp_launch_command] Training execution command (string):
-    E.g. python -m ajet.launcher --conf tests/bench/benchmark_math/benchmark_math.yaml
+    E.g. python -m ajet.launcher --conf tests/bench/benchmark_math/benchmark_math.yaml --skip-check-avail-gpu --with-ray
 6. [exp_result_dir] Result data storage path (absolute path):
     Path for output data storage
 7. [exp_max_time] Maximum runtime is ${MaxTime}; each experiment is forcefully terminated after ${MaxTime}
@@ -30,9 +33,12 @@ An experiment blueprint is a markdown file (blueprint.md). It contains 7 section
 ## YAML Configuration Notes:
 
 `ajet.execute_test` should be False, because when enabled, training will be interrupted if the training reward score falls below a pre-defined threshold.
+`ajet.project_name` the current research task name; recommended to keep consistent across all blueprints for easier swanlab curve comparison.
+`ajet.experiment_name` the current experiment name; different blueprints and stages should have different experiment names.
 `ajet.trainer_common.test_freq` specifies how many steps between each evaluation.
 `ajet.trainer_common.n_gpus_per_node` number of GPUs.
-`ajet.trainer_common.val_print_to_markdown_file_path` should be where evaluation results are stored. Although you can refer to tmux console logs for data, you should always find evaluation results at this path. Choose a path for logs, e.g. `saved_val_result/qwen2-7b-task-math-exp-01.md`. Val attribute list:
+`ajet.trainer_common.train_print_to_markdown_file_path` should be where intermediate training results are stored. Not critical, but should still be specified.
+`ajet.trainer_common.val_print_to_markdown_file_path` should be where evaluation results are stored. Although you can refer to tmux console logs for data, you should always find evaluation results at this path:
     pass_n: For each task, how many times to run repeatedly.
     total_tasks: Number of tasks in the validation dataset.
     num_all_success_tasks: Number of tasks achieving 100% success rate.
@@ -46,7 +52,15 @@ An experiment blueprint is a markdown file (blueprint.md). It contains 7 section
 `ajet.trainer_common.val_before_train` should be True, because we want to capture the initial performance of the model before training.
 `ajet.trainer_common.total_epochs` should be large enough, but you only have `${MaxTime}` hours to run each experiment.
 
+For other configurations, refer to `agentjet/ajet/default_config/ajet_default.yaml`, do not use ANY configurations that is absent in `ajet_default.yaml`,
 
+## AgentJet Launcher Arguments
+
+- assign training config yaml: `--conf /path/to/yaml`
+- skip gpu check: `--skip-check-avail-gpu`
+- init ray before training (always to this): `--with-ray`
+- init appworld service before training: `--with-appworld` (must install appworld according to `agentjet/docs/en/example_app_world.md` before you use `--with-appworld`)
+- kill all ray and python (dangerous! never use this one.): `--autokill`
 
 ## Running Experiments with tmux
 
@@ -184,7 +198,7 @@ You must ensure the experiment continues running throughout the [exp_max_time] p
     goto
     /foo/bar/venv
     run with venv and monitor
-    source .venv/bin/activate && python -m ajet.launcher --conf tests/bench/benchmark_math/benchmark_math.yaml
+    source .venv/bin/activate && python -m ajet.launcher --conf tests/bench/benchmark_math/benchmark_math.yaml --skip-check-avail-gpu --with-ray
     --- example user instruction end ---
 
     --- example agent reaction begin ---
@@ -215,7 +229,7 @@ You must ensure the experiment continues running throughout the [exp_max_time] p
     ...
 
     # Start training with venv and launcher
-    $ tmux send-keys -t ajet_session "source .venv/bin/activate && python -m ajet.launcher --conf tests/bench/benchmark_math/benchmark_math.yaml" Enter
+    $ tmux send-keys -t ajet_session "source .venv/bin/activate && python -m ajet.launcher --conf tests/bench/benchmark_math/benchmark_math.yaml --skip-check-avail-gpu --with-ray" Enter
     ...
 
     # Capture initial training output
@@ -250,14 +264,16 @@ You must ensure the experiment continues running throughout the [exp_max_time] p
     ```
 ```
 
-## Skip check gpu
+## Using GPUs
 
-You should use `--skip-check-avail-gpu` argument of `ajet` when there are GPUs that are busy (check `nvidia-smi` before running the experiment).
+You should use `--skip-check-avail-gpu` and `--with-ray` argument of `ajet` when starting the experiment.
 This is very important when you feel that you are not the only one that is experimenting with a blueprint.
+Then you should use `CUDA_VISIBLE_DEVICES` env variable to declare the GPUs you are using.
 
-You should never use `CUDA_VISIBLE_DEVICES`! This command will cause confusion in ray system, never use `CUDA_VISIBLE_DEVICES`, let ray manager its own stuff!
+When there are GPUs that are busy, check `nvidia-smi` before running the experiment.
 
 And never use `--autokill` argument, that will destory all running experiments running on the same server.
+
 
 ## Warning
 

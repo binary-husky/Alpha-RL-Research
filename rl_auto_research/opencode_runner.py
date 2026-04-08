@@ -271,6 +271,13 @@ def run(research_topic: str = "", blueprint:str="", mod: str = "",
             f"Try everything you can to make the experiment running until reaching the time limit or completing the goal written in the blueprint.\n"
         )
 
+    from rl_auto_research.config import config
+    if config.get("runner") == "ssh":
+        prompt += "---"
+        prompt += "Special warning: to run multiple experiments in parallel in same server, you need to arrange CUDA_VISIBLE_DEVICES for each experiment in experiment blueprint.\n"
+
+
+
     _ensure_opencode_web(skip_permissions=skip_permissions)
     run_args = ["run", f"--attach=http://localhost:4096", prompt]
 
