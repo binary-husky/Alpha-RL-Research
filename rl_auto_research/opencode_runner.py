@@ -104,8 +104,7 @@ def run_opencode(args: list[str], *, continue_mode=False, session_id=None,
     # Snapshot existing sessions before spawning so we can detect the new one
     existing_sessions = _get_opencode_sessions() if not continue_mode else {}
 
-    print("[controller message]: executing", " ".join(cmd))
-    print("[controller message]: using envs", env)
+    command = " ".join(cmd)
     process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=env)
 
     # Detect new session ID right after spawn (only for new sessions)
@@ -119,12 +118,14 @@ def run_opencode(args: list[str], *, continue_mode=False, session_id=None,
             if new_session_ids:
                 detected_session_id = new_session_ids.pop()
                 title = current_sessions[detected_session_id]
-                print_dict({"session_id": detected_session_id, "title": title}, header="Created new session")
+                print_dict({"session_id": detected_session_id, "title": title, "command": command}, header="Created new session")
                 break
         else:
             raise RuntimeError("Failed to detect new opencode session ID after 30s. Aborting.")
     else:
-        print_dict({"session_id": session_id}, header="Resume old session")
+        current_sessions = _get_opencode_sessions()
+        title = current_sessions[session_id]
+        print_dict({"session_id": session_id, "title": title, "command": command}, header="Resume old session")
 
 
     terminated_due_to_permission = False
@@ -141,43 +142,45 @@ def run_opencode(args: list[str], *, continue_mode=False, session_id=None,
     return process.returncode, terminated_due_to_permission, detected_session_id
 
 
-def _is_opencode_web_running() -> bool:
-    result = subprocess.run(["pgrep", "-f", "opencode web"], capture_output=True, text=True)
-    return result.returncode == 0
-
-
-def _is_kite_client_running() -> bool:
-    result = subprocess.run(["pgrep", "-f", "kite-client"], capture_output=True, text=True)
-    return result.returncode == 0
-
-
 def _ensure_opencode_web(skip_permissions=False):
-    if not _is_opencode_web_running():
-        env = None
-        if skip_permissions:
-            yolo_config = _prepare_yolo_config()
-            env = {**os.environ, "OPENCODE_CONFIG": yolo_config}
-        print("[controller message]: Starting opencode web...")
-        subprocess.Popen(["opencode", "web"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env)
-        time.sleep(2)
+    from rl_auto_research.utils.smart_daemon import LaunchCommandWhenAbsent
+
+    env_dict = {**os.environ}
+    if skip_permissions:
+        yolo_config = _prepare_yolo_config()
+        env_dict["OPENCODE_CONFIG"] = yolo_config
+
+    print("[controller message]: Starting opencode web...")
+    opencode_web = LaunchCommandWhenAbsent(
+        full_argument_list=["opencode", "web"],
+        tag="opencode_web_service",
+    )
+    opencode_web.launch(
+        launch_wait_time=10,
+        success_std_string="Web interface",
+        env_dict=env_dict,
+    )
 
     # Start kite-client for remote monitoring if configured
-    if not _is_kite_client_running():
-        from rl_auto_research.config import config
-        remote_cfg = config.get("remote_monitor", {})
-        remote_url = remote_cfg.get("remote_url")
-        api_key = remote_cfg.get("api_key")
-        if remote_url and api_key:
-            print(f"[controller message]: Starting kite-client -> {remote_url}")
-            subprocess.Popen(   # `pip install kite-strings` to get kite-client CLI tool
-                ["kite-client", "--server", remote_url, "--apikey", api_key, "--map", "4096:opencode_web"],
-                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-            )
-            time.sleep(2)
-            print("[controller message]: kite-client started for remote monitoring.")
-        else:
-            time.sleep(2)
-            print("[controller message]: remote_monitor config not found, skipping kite-client startup.")
+    from rl_auto_research.config import config
+    remote_cfg = config.get("remote_monitor", {})
+    remote_url = remote_cfg.get("remote_url")
+    api_key = remote_cfg.get("api_key")
+    if remote_url and api_key:
+        print(f"[controller message]: Starting kite-client -> {remote_url}")
+        command = ["kite-client", "--server", remote_url, "--apikey", api_key, "--map", "4096:opencode_web"]
+        kite = LaunchCommandWhenAbsent(
+            full_argument_list=command,
+            tag="kite_client_service",
+        )
+        kite.launch(
+            launch_wait_time=20,
+            success_std_string="forwarding_success",
+            env_dict=env_dict,
+        )
+        print("[controller message]: kite-client started for remote monitoring.")
+    else:
+        print("[controller message]: remote_monitor config not found, skipping kite-client startup.")
 
 
 # ---------------------------------------------------------------------------
@@ -216,7 +219,9 @@ def _check_ssh_connectivity() -> None:
         print(f"[controller message]: SSH connection to {label} OK.")
 
 
-def run(research_topic: str = "", blueprint:str="", mod: str = "", resume_latest_session: bool = False, resume_instruction: str = "", only_run_planning: bool = False, skip_permissions: bool = False) -> int:
+def run(research_topic: str = "", blueprint:str="", mod: str = "",
+        resume_latest_session: bool = False, resume_instruction: str = "",
+        only_run_planning: bool = False, skip_permissions: bool = False) -> int:
 
     _check_ssh_connectivity()
 
@@ -266,8 +271,6 @@ def run(research_topic: str = "", blueprint:str="", mod: str = "", resume_latest
             f"Try everything you can to make the experiment running until reaching the time limit or completing the goal written in the blueprint.\n"
         )
 
-    assert not (resume_latest_session and only_run_planning), "resume_latest_session and only_run_planning cannot be both True"
-
     _ensure_opencode_web(skip_permissions=skip_permissions)
     run_args = ["run", f"--attach=http://localhost:4096", prompt]
 
@@ -293,12 +296,18 @@ def run(research_topic: str = "", blueprint:str="", mod: str = "", resume_latest
         print("[controller message]: Continuing session ...")
         if session_id:
             returncode, terminated_due_to_permission, _ = run_opencode(
-                run_args, continue_mode=True, session_id=session_id,
+                run_args,
+                continue_mode=True,
+                session_id=session_id,
                 need_permission_error_fix=terminated_due_to_permission,
                 resume_instruction=resume_instruction,
                 skip_permissions=skip_permissions,
             )
             resume_instruction = ""  # only apply the resume_instruction for one time
+            if only_run_planning:
+                return returncode
+        else:
+            raise RuntimeError("No session ID detected to continue.")
 
     if mod == "worker":
         still_training = "/still_training"

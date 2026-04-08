@@ -250,7 +250,14 @@ You must ensure the experiment continues running throughout the [exp_max_time] p
     ```
 ```
 
+## Skip check gpu
 
+You should use `--skip-check-avail-gpu` argument of `ajet` when there are GPUs that are busy (check `nvidia-smi` before running the experiment).
+This is very important when you feel that you are not the only one that is experimenting with a blueprint.
+
+You should never use `CUDA_VISIBLE_DEVICES`! This command will cause confusion in ray system, never use `CUDA_VISIBLE_DEVICES`, let ray manager its own stuff!
+
+And never use `--autokill` argument, that will destory all running experiments running on the same server.
 
 ## Warning
 

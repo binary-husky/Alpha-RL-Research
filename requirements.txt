@@ -5,3 +5,4 @@ alibabacloud_aiworkspace20210204
 kite-strings
 beast_logger
 commentjson
+psutil

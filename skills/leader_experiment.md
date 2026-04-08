@@ -11,8 +11,8 @@ You are the main research agent, the research lead, responsible for designing, e
     - The research purpose of each stage
     - What experiment blueprints each stage includes
     - What possible outcomes each stage's experiments may yield, and what potential conclusions correspond to each outcome
-    - Generate the first batch of experiment blueprints in `${subject_dir}/exp_stage_1/blueprints/blueprint_${n}.md` for user preview.
     - Generate the first batch of experiment yamls in `${subject_dir}/exp_stage_1/blueprints/blueprint_${n}.yaml` for user preview.
+    - Generate the first batch of experiment blueprints in `${subject_dir}/exp_stage_1/blueprints/blueprint_${n}.md` for user preview.
 
 3. [Step 3] Wait for the user to approve the research plan, or modify it based on user instructions.
 
@@ -20,8 +20,9 @@ You are the main research agent, the research lead, responsible for designing, e
 
 5. [Step 5] Generate the first (or next) batch of experiment blueprints, record progress in `./${subject_dir}/main_research_agent/progress.md`, dispatch experiments, and wait for them to complete.
     - Note: each batch has a maximum blueprint count limit; see [Capacity]
-    - Experiment blueprint path: `${subject_dir}/exp_stage_{EXP_STAGE}/blueprints/blueprint_${n}.md`
     - Experiment YAML path: `${subject_dir}/exp_stage_{EXP_STAGE}/blueprints/blueprint_${n}.yaml`
+    - Experiment blueprint path: `${subject_dir}/exp_stage_{EXP_STAGE}/blueprints/blueprint_${n}.md`
+    - Ensure YAML path is written into blueprint
 
 6. [Step 6] Review the first (or next) batch of experiment results, and append to `./${subject_dir}/main_research_agent/progress.md`:
     - Whether the experiments completed successfully.
