@@ -1,4 +1,4 @@
-# rl_auto_research
+# alpha_auto_research
 
 Automated RL research system with a leader-worker architecture, powered by [OpenCode](https://github.com/anthropics/opencode) AI agents.
 
@@ -167,7 +167,7 @@ The leader agent generates these from the research plan; worker agents execute t
 ## Project Structure
 
 ```
-rl_auto_research/
+alpha_auto_research/
   config.py                  Config loader (research_config.jsonc)
   opencode_runner.py         Leader/worker agent orchestrator
   cli.py                     Convenience CLI entry points
@@ -183,9 +183,10 @@ rl_auto_research/
   utils/
     pty.py                   Pseudo-terminal runner
     smart_daemon.py          Detached process management
-skills/
-  leader_experiment.md       Leader agent instructions
-  worker_experiment.md       Worker agent instructions
+  skills/
+    leader_experiment.md       Leader agent instructions
+    leader_experiment.no_human.md  Autonomous leader (no human review)
+    worker_experiment.md       Worker agent instructions
 ```
 
 ## Example: Full Research Cycle

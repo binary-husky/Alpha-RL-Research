@@ -4,12 +4,12 @@ Blueprint runner CLI entry point.
 Dispatches to the configured backend (PAI or SSH).
 
 Usage:
-    python -m rl_auto_research.blueprint_runner.blueprint_runner --blueprint=<path>
+    python -m alpha_auto_research.blueprint_runner.blueprint_runner --blueprint=<path>
 """
 
 import argparse
 
-from rl_auto_research.blueprint_runner.base import get_runner
+from alpha_auto_research.blueprint_runner.base import get_runner
 
 
 def run_blueprint():

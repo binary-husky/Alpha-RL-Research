@@ -90,7 +90,7 @@ def pty_wrapper_final(human_cmd, dir, env_dict):
 
 
 def pty_launch(service_name: str, success_std_string="Starting server on", prefix: str=""):
-    from rl_auto_research.utils.smart_daemon import LaunchCommandWhenAbsent
+    from alpha_auto_research.utils.smart_daemon import LaunchCommandWhenAbsent
 
     service_path = os.environ.get(f"{service_name.upper()}_PATH")
     service_script = os.environ.get(f"{service_name.upper()}_SCRIPT")

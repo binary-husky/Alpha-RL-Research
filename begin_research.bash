@@ -5,13 +5,13 @@ git clone https://github.com/modelscope/AgentJet.git codebase/agentjet
 
 
 ## plan -> human review -> experiment (human-in-the-loop)
-`alpha_rl_research_new_planning`      = `python -m rl_auto_research.opencode_runner leader --skip-permissions --only-run-planning`
-`alpha_rl_research_resume_planning`   = `python -m rl_auto_research.opencode_runner leader --skip-permissions --resume --only-run-planning`
-`alpha_rl_research_begin_experiments` = `python -m rl_auto_research.opencode_runner leader --skip-permissions --resume`
-`alpha_rl_research_resume_experiment` = `python -m rl_auto_research.opencode_runner leader --skip-permissions --resume`
+`alpha_rl_research_new_planning`      = `python -m alpha_auto_research.opencode_runner leader --skip-permissions --only-run-planning`
+`alpha_rl_research_resume_planning`   = `python -m alpha_auto_research.opencode_runner leader --skip-permissions --resume --only-run-planning`
+`alpha_rl_research_begin_experiments` = `python -m alpha_auto_research.opencode_runner leader --skip-permissions --resume`
+`alpha_rl_research_resume_experiment` = `python -m alpha_auto_research.opencode_runner leader --skip-permissions --resume`
 
 ## plan -> experiment (human-less)
-`alpha_rl_research_new_research_no_human`          = `python -m rl_auto_research.opencode_runner leader --skip-permissions --no-human-in-the-loop`
+`alpha_rl_research_new_research_no_human`          = `python -m alpha_auto_research.opencode_runner leader --skip-permissions --no-human-in-the-loop`
 
 ## topic 01
 # plan first

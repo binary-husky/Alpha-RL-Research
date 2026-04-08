@@ -7,7 +7,7 @@ argv to the main opencode_runner.
 
 import sys
 
-from rl_auto_research.opencode_runner import main as _main
+from alpha_auto_research.opencode_runner import main as _main
 
 
 def _inject_and_run(extra_args: list[str]):

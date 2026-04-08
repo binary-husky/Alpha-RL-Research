@@ -11,10 +11,10 @@ You are the main research agent, the research lead, responsible for designing, e
     - The research purpose of each stage
     - What experiment blueprints each stage includes
     - What possible outcomes each stage's experiments may yield, and what potential conclusions correspond to each outcome
-    - Generate the first batch of experiment yamls in `${subject_dir}/exp_stage_1/blueprints/blueprint_${n}.yaml` for user preview.
-    - Generate the first batch of experiment blueprints in `${subject_dir}/exp_stage_1/blueprints/blueprint_${n}.md` for user preview.
+    - Generate the first batch of experiment yamls in `${subject_dir}/exp_stage_1/blueprints/blueprint_${n}.yaml`.
+    - Generate the first batch of experiment blueprints in `${subject_dir}/exp_stage_1/blueprints/blueprint_${n}.md`.
 
-3. [Step 3] Wait for the user to approve the research plan, or modify it based on user instructions.
+3. [Step 3] Double check the generated yamls and blueprints, ensure they provide valid and effective path and instructions.
 
 4. [Step 4] EXP_STAGE = 1
 
@@ -148,7 +148,7 @@ Here is an example of an experiment blueprint:
 ## How to Start a Batch of Experiments (After Writing Blueprints):
 
 - Generate experiment blueprints at `${subject_dir}/exp_stage_{EXP_STAGE}/blueprints/blueprint_${n}.md`
-- Run `python -m rl_auto_research.blueprint_runner.blueprint_runner --blueprint=${path_to_blue_print}` to submit the blueprint to the GPU cluster
+- Run `python -m alpha_auto_research.blueprint_runner.blueprint_runner --blueprint=${path_to_blue_print}` to submit the blueprint to the GPU cluster
 - Record the returned job_id in `./${subject_dir}/main_research_agent/progress.md`
 - Record task progress in `./${subject_dir}/main_research_agent/progress.md`
 
@@ -159,14 +159,14 @@ Note: remember to batch process. When possible, generate a batch of blueprints b
 
 Every 10 minutes (sleep 600):
 - Check whether [exp_result_dir] contains a `finish.flag` file. If yes, the task is complete; otherwise, continue waiting.
-- Run `python -m rl_auto_research.blueprint_runner.scan_jobs` to check the current blueprint status (Queuing / Running / Succeeded)
+- Run `python -m alpha_auto_research.blueprint_runner.scan_jobs` to check the current blueprint status (Queuing / Running / Succeeded)
 
 
 ## How to Stop Experiments:
 
 - Think twice when you terminate a experiment!
-- Run `python -m rl_auto_research.blueprint_runner.stop_jobs --stop-job-id=<job_id>` to stop a running job
-- Multiple jobs: `python -m rl_auto_research.blueprint_runner.stop_jobs --stop-job-id=<id1> --stop-job-id=<id2>`
+- Run `python -m alpha_auto_research.blueprint_runner.stop_jobs --stop-job-id=<job_id>` to stop a running job
+- Multiple jobs: `python -m alpha_auto_research.blueprint_runner.stop_jobs --stop-job-id=<id1> --stop-job-id=<id2>`
 - To also delete after stopping: add `--delete`
 
 
@@ -198,6 +198,7 @@ Every 10 minutes (sleep 600):
     std_reward: Reward standard deviation across all data points.
 `ajet.trainer_common.val_before_train` should be True, because we want to capture the initial performance of the model before training.
 `ajet.trainer_common.total_epochs` should be large enough, but you only have `${MaxTime}` hours to run each experiment.
+`ajet.trainer_common.total_training_steps` the max global steps, prior than `ajet.trainer_common.total_epochs` if it is not `null`.
 
 For other configurations, refer to `agentjet/ajet/default_config/ajet_default.yaml`, do not use ANY configurations that is absent in `ajet_default.yaml`,
 

@@ -18,15 +18,21 @@ dependencies = [
     "psutil",
 ]
 
+[tool.setuptools.packages.find]
+include = ["alpha_auto_research*"]
+
+[tool.setuptools.package-data]
+alpha_auto_research = ["skills/*.md"]
+
 [project.scripts]
-alpha-rl-research = "rl_auto_research.opencode_runner:main"
-alpha-run-blueprint = "rl_auto_research.blueprint_runner.blueprint_runner:run_blueprint"
-alpha-scan-jobs = "rl_auto_research.blueprint_runner.scan_jobs:main"
-alpha-stop-jobs = "rl_auto_research.blueprint_runner.stop_jobs:main"
+alpha-rl-research = "alpha_auto_research.opencode_runner:main"
+alpha-run-blueprint = "alpha_auto_research.blueprint_runner.blueprint_runner:run_blueprint"
+alpha-scan-jobs = "alpha_auto_research.blueprint_runner.scan_jobs:main"
+alpha-stop-jobs = "alpha_auto_research.blueprint_runner.stop_jobs:main"
 
 # Convenience aliases matching begin_research.bash
-alpha-rl-new-planning = "rl_auto_research.cli:new_planning"
-alpha-rl-resume-planning = "rl_auto_research.cli:resume_planning"
-alpha-rl-begin-experiments = "rl_auto_research.cli:begin_experiments"
-alpha-rl-resume-experiment = "rl_auto_research.cli:resume_experiment"
-alpha-rl-new-research-no-human = "rl_auto_research.cli:new_research_no_human"
+alpha-rl-new-planning = "alpha_auto_research.cli:new_planning"
+alpha-rl-resume-planning = "alpha_auto_research.cli:resume_planning"
+alpha-rl-begin-experiments = "alpha_auto_research.cli:begin_experiments"
+alpha-rl-resume-experiment = "alpha_auto_research.cli:resume_experiment"
+alpha-rl-new-research-no-human = "alpha_auto_research.cli:new_research_no_human"

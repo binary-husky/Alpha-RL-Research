@@ -5,12 +5,12 @@ Leader mode:  Orchestrates research via a blueprint, manages a running_flag file
 Worker mode:  Runs inside a PAI DLC node, checks tmux session liveness.
 
 Usage:
-    python -m rl_auto_research.opencode_runner leader \
+    python -m alpha_auto_research.opencode_runner leader \
         --attach=http://localhost:4096 \
         --blueprint=/path/to/blueprint.md \
         --additional-prompt="..."
 
-    python -m rl_auto_research.opencode_runner worker \
+    python -m alpha_auto_research.opencode_runner worker \
         <opencode args...>
 """
 
@@ -20,7 +20,11 @@ import os
 import subprocess
 import sys
 import time
+from pathlib import Path
+
 from beast_logger import print_dict
+
+_PACKAGE_DIR = Path(__file__).resolve().parent
 
 # ---------------------------------------------------------------------------
 # Shared helpers
@@ -143,7 +147,7 @@ def run_opencode(args: list[str], *, continue_mode=False, session_id=None,
 
 
 def _ensure_opencode_web(skip_permissions=False):
-    from rl_auto_research.utils.smart_daemon import LaunchCommandWhenAbsent
+    from alpha_auto_research.utils.smart_daemon import LaunchCommandWhenAbsent
 
     env_dict = {**os.environ}
     if skip_permissions:
@@ -162,7 +166,7 @@ def _ensure_opencode_web(skip_permissions=False):
     )
 
     # Start kite-client for remote monitoring if configured
-    from rl_auto_research.config import config
+    from alpha_auto_research.config import config
     remote_cfg = config.get("remote_monitor", {})
     remote_url = remote_cfg.get("remote_url")
     api_key = remote_cfg.get("api_key")
@@ -199,10 +203,10 @@ def _should_continue(terminated_due_to_permission: bool, running_flag: str) -> b
 
 def _check_ssh_connectivity() -> None:
     """Verify SSH connectivity to all configured hosts before starting. Exits on failure."""
-    from rl_auto_research.config import config
+    from alpha_auto_research.config import config
     if config.get("runner") != "ssh":
         return
-    from rl_auto_research.blueprint_runner.ssh_runner import _run_cmd
+    from alpha_auto_research.blueprint_runner.ssh_runner import _run_cmd
     hosts = config.get("ssh", {}).get("hosts", [])
     if not hosts:
         print("[controller message]: WARNING: runner is 'ssh' but no hosts configured.")
@@ -237,10 +241,9 @@ def run(research_topic: str = "", blueprint:str="", mod: str = "",
 
     if mod == "leader":
         if no_human_in_the_loop:
-            leader_skill_path = "skills/leader_experiment.no_human.md"
+            leader_skill_path = str(_PACKAGE_DIR / "skills" / "leader_experiment.no_human.md")
         else:
-            leader_skill_path = "skills/leader_experiment.md"
-        leader_skill_path = os.path.abspath(leader_skill_path)
+            leader_skill_path = str(_PACKAGE_DIR / "skills" / "leader_experiment.md")
         assert os.path.exists(leader_skill_path), f"skill not found: {leader_skill_path}"
 
         if os.path.exists(research_topic):
@@ -265,8 +268,7 @@ def run(research_topic: str = "", blueprint:str="", mod: str = "",
             prompt += "Only generate the research plan and exit without running the experiments."
 
     elif mod == "worker":
-        worker_skill_path = "skills/worker_experiment.md"
-        worker_skill_path = os.path.abspath(worker_skill_path)
+        worker_skill_path = str(_PACKAGE_DIR / "skills" / "worker_experiment.md")
         worker_blueprint_path = os.path.abspath(blueprint)
         assert os.path.exists(worker_skill_path), f"skill not found: {worker_skill_path}"
         assert os.path.exists(worker_blueprint_path), f"blueprint not found: {worker_blueprint_path}"
@@ -281,7 +283,7 @@ def run(research_topic: str = "", blueprint:str="", mod: str = "",
             f"Try everything you can to make the experiment running until reaching the time limit or completing the goal written in the blueprint.\n"
         )
 
-    from rl_auto_research.config import config
+    from alpha_auto_research.config import config
     if config.get("runner") == "ssh":
         prompt += "---"
         prompt += "Special warning: to run multiple experiments in parallel in same server, you need to arrange CUDA_VISIBLE_DEVICES for each experiment in experiment blueprint.\n"

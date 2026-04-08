@@ -3,8 +3,8 @@
 set -euo pipefail
 
 python3 -c "
-from rl_auto_research.config import config
-from rl_auto_research.blueprint_runner.ssh_runner import _run_cmd
+from alpha_auto_research.config import config
+from alpha_auto_research.blueprint_runner.ssh_runner import _run_cmd
 
 if config.get('runner') != 'ssh':
     print('Runner is not ssh, nothing to check.')

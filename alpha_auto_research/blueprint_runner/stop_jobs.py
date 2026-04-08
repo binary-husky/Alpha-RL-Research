@@ -4,15 +4,15 @@ Stop (and optionally delete) jobs.
 Dispatches to the configured backend (PAI or SSH).
 
 Usage:
-    python -m rl_auto_research.blueprint_runner.stop_jobs --stop-job-id=<job_id>
-    python -m rl_auto_research.blueprint_runner.stop_jobs --stop-job-id=<id1> --stop-job-id=<id2>
-    python -m rl_auto_research.blueprint_runner.stop_jobs --stop-job-id=<job_id> --delete
+    python -m alpha_auto_research.blueprint_runner.stop_jobs --stop-job-id=<job_id>
+    python -m alpha_auto_research.blueprint_runner.stop_jobs --stop-job-id=<id1> --stop-job-id=<id2>
+    python -m alpha_auto_research.blueprint_runner.stop_jobs --stop-job-id=<job_id> --delete
 """
 
 import argparse
 import time
 
-from rl_auto_research.blueprint_runner.base import get_runner
+from alpha_auto_research.blueprint_runner.base import get_runner
 
 
 def main():

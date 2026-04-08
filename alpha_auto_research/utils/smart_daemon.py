@@ -287,7 +287,7 @@ class LaunchWhenAbsent:
                     converted_cmd = [
                         sys.executable,
                         "-m",
-                        "rl_auto_research.utils.pty",
+                        "alpha_auto_research.utils.pty",
                         "--human-cmd",
                         f"'{string_to_base64(self.cmd[0])}'",
                         "--dir",

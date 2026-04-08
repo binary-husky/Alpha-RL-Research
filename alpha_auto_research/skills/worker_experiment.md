@@ -51,6 +51,7 @@ An experiment blueprint is a markdown file (blueprint.md). It contains 7 section
     std_reward: Reward standard deviation across all data points.
 `ajet.trainer_common.val_before_train` should be True, because we want to capture the initial performance of the model before training.
 `ajet.trainer_common.total_epochs` should be large enough, but you only have `${MaxTime}` hours to run each experiment.
+`ajet.trainer_common.total_training_steps` the max global steps, prior than `ajet.trainer_common.total_epochs` if it is not `null`.
 
 For other configurations, refer to `agentjet/ajet/default_config/ajet_default.yaml`, do not use ANY configurations that is absent in `ajet_default.yaml`,
 

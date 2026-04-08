@@ -4,10 +4,10 @@ Scan and display running jobs.
 Dispatches to the configured backend (PAI or SSH).
 
 Usage:
-    python -m rl_auto_research.blueprint_runner.scan_jobs
+    python -m alpha_auto_research.blueprint_runner.scan_jobs
 """
 
-from rl_auto_research.blueprint_runner.base import get_runner
+from alpha_auto_research.blueprint_runner.base import get_runner
 
 
 def main():

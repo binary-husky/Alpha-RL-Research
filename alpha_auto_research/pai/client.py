@@ -2,7 +2,7 @@
 Alibaba Cloud PAI DLC client.
 
 Handles job creation, listing, monitoring, and dataset creation.
-All credentials come from rl_auto_research.config.
+All credentials come from alpha_auto_research.config.
 """
 
 import json
@@ -21,7 +21,7 @@ from alibabacloud_aiworkspace20210204.models import CreateDatasetRequest
 
 import os
 
-from rl_auto_research.config import config
+from alpha_auto_research.config import config
 
 
 def _set_credentials():

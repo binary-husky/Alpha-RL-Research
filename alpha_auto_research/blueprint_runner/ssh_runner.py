@@ -11,8 +11,8 @@ import subprocess
 import time
 from textwrap import dedent
 
-from rl_auto_research.config import config
-from rl_auto_research.blueprint_runner.base import ExperimentSubagent
+from alpha_auto_research.config import config
+from alpha_auto_research.blueprint_runner.base import ExperimentSubagent
 
 
 
@@ -92,7 +92,7 @@ class SshExperimentSubagent(ExperimentSubagent):
             tmux send-keys -t {session_name} "export SETUPTOOLS_USE_DISTUTILS=local" Enter && \\
             tmux send-keys -t {session_name} "export OPENCODE_EXPERIMENTAL_BASH_DEFAULT_TIMEOUT_MS=1800000" Enter && \\
             sleep 2 && \\
-            tmux send-keys -t {session_name} "python -m rl_auto_research.opencode_runner worker --blueprint={blueprint_path}; rm -f {still_training}" Enter && \\
+            tmux send-keys -t {session_name} "python -m alpha_auto_research.opencode_runner worker --blueprint={blueprint_path}; rm -f {still_training}" Enter && \\
             touch {still_training}\
         """)
 

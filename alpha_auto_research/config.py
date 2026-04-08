@@ -2,7 +2,7 @@
 Centralized config loader.
 
 Reads research_config.jsonc from the project root.
-Usage: from rl_auto_research.config import config
+Usage: from alpha_auto_research.config import config
 """
 
 import commentjson as json
