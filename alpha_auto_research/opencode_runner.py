@@ -1,8 +1,8 @@
 """
 Unified OpenCode agent runner — supports both leader and worker modes.
 
-Leader mode:  Orchestrates research via a blueprint, manages a running_flag file.
-Worker mode:  Runs inside a PAI DLC node, checks tmux session liveness.
+Leader role:  Orchestrates research via a blueprint, manages a running_flag file.
+Worker role:  Runs inside a PAI DLC node, checks tmux session liveness.
 
 Usage:
     python -m alpha_auto_research.opencode_runner leader \
@@ -30,6 +30,22 @@ _PACKAGE_DIR = Path(__file__).resolve().parent
 # Shared helpers
 # ---------------------------------------------------------------------------
 
+def _parse_sessions_json(stdout: str) -> list[dict]:
+    """Parse session list JSON, tolerating truncated output."""
+    try:
+        return json.loads(stdout)
+    except json.JSONDecodeError:
+        # Output may be truncated for large session lists — try to salvage
+        # by finding the last complete object (ends with '}')
+        last_brace = stdout.rfind("}")
+        if last_brace == -1:
+            return []
+        try:
+            return json.loads(stdout[:last_brace + 1] + "\n]")
+        except json.JSONDecodeError:
+            return []
+
+
 def _get_opencode_sessions() -> dict[str, str]:
     """Return a dict mapping session ID -> title for all current opencode sessions."""
     result = subprocess.run(
@@ -38,23 +54,34 @@ def _get_opencode_sessions() -> dict[str, str]:
     )
     if result.returncode != 0:
         return {}
-    sessions = json.loads(result.stdout)
+    sessions = _parse_sessions_json(result.stdout)
     return {s["id"]: s.get("title", "") for s in sessions}
 
 
-def _get_latest_opencode_session() -> tuple[str, str] | None:
-    """Return (id, title) of the most recently updated session, or None."""
+def _get_opencode_session_from_title(title="") -> tuple[str, str] | None:
+    """Return (id, title) of the most recently updated session with the given title, or None."""
     result = subprocess.run(
         ["opencode", "session", "list", "--format=json"],
         capture_output=True, text=True,
     )
     if result.returncode != 0:
         return None
-    sessions = json.loads(result.stdout)
+    sessions = _parse_sessions_json(result.stdout)
     if not sessions:
         return None
-    latest = max(sessions, key=lambda s: s["updated"])
+    filtered_sessions = [s for s in sessions if s.get("title", "") == title]
+    if not filtered_sessions:
+        return None
+    latest = max(filtered_sessions, key=lambda s: s["updated"])
     return latest["id"], latest.get("title", "")
+
+
+def _delete_opencode_session_from_title(title="") -> None:
+    """Delete all sessions with the given title."""
+    sessions = _get_opencode_sessions()
+    for session_id, session_title in sessions.items():
+        if session_title == title:
+            subprocess.run(["opencode", "session", "delete", session_id])
 
 
 def _prepare_yolo_config():
@@ -80,7 +107,7 @@ def _prepare_yolo_config():
 
 def run_opencode(args: list[str], *, continue_mode=False, session_id=None,
                  need_permission_error_fix=False, resume_instruction="",
-                 skip_permissions=False) -> tuple[int, bool, str | None]:
+                 skip_permissions=False, research_topic="") -> tuple[int, bool, str | None]:
     """Run opencode and return (returncode, terminated_due_to_permission, session_id).
 
     When starting a new session (not continue_mode), detects the newly created
@@ -119,6 +146,7 @@ def run_opencode(args: list[str], *, continue_mode=False, session_id=None,
             time.sleep(1)
             current_sessions = _get_opencode_sessions()
             new_session_ids = set(current_sessions) - set(existing_sessions)
+
             if new_session_ids:
                 detected_session_id = new_session_ids.pop()
                 title = current_sessions[detected_session_id]
@@ -146,7 +174,7 @@ def run_opencode(args: list[str], *, continue_mode=False, session_id=None,
     return process.returncode, terminated_due_to_permission, detected_session_id
 
 
-def _ensure_opencode_web(skip_permissions=False):
+def _ensure_opencode_web(skip_permissions=False, role="leader"):
     from alpha_auto_research.utils.smart_daemon import LaunchCommandWhenAbsent
 
     env_dict = {**os.environ}
@@ -156,8 +184,9 @@ def _ensure_opencode_web(skip_permissions=False):
 
     print("[controller message]: Starting opencode web...")
     opencode_web = LaunchCommandWhenAbsent(
-        full_argument_list=["opencode", "web"],
+        full_argument_list=["opencode web"],
         tag="opencode_web_service",
+        use_pty=True,
     )
     opencode_web.launch(
         launch_wait_time=10,
@@ -172,10 +201,12 @@ def _ensure_opencode_web(skip_permissions=False):
     api_key = remote_cfg.get("api_key")
     if remote_url and api_key:
         print(f"[controller message]: Starting kite-client -> {remote_url}")
-        command = ["kite-client", "--server", remote_url, "--apikey", api_key, "--map", "4096:opencode_web"]
+        command = ["kite-client", "--server", remote_url, "--apikey", api_key, "--map", f"4096:opencode_web_{role}"]
+        command_str = " ".join(command)
         kite = LaunchCommandWhenAbsent(
-            full_argument_list=command,
+            full_argument_list=[command_str],
             tag="kite_client_service",
+            use_pty=True,
         )
         kite.launch(
             launch_wait_time=20,
@@ -188,16 +219,18 @@ def _ensure_opencode_web(skip_permissions=False):
 
 
 # ---------------------------------------------------------------------------
-# Leader mode
+# Leader role
 # ---------------------------------------------------------------------------
 
 def _should_continue(terminated_due_to_permission: bool, running_flag: str) -> bool:
     if terminated_due_to_permission:
-        print("[controller message]: Session terminated due to permission. Will attempt to continue.")
+        print_dict({"end reason": "[controller message]: Need Resume. Session terminated due to permission. Will attempt to continue."})
         return True
     if os.path.exists(running_flag):
+        print_dict({"end reason": "[controller message]: Need Resume."})
         return True
     else:
+        print_dict({"end reason": "[controller message]: Session terminated due to running_flag is gone. Looks like the agent has completed its task."})
         return False
 
 
@@ -223,7 +256,7 @@ def _check_ssh_connectivity() -> None:
         print(f"[controller message]: SSH connection to {label} OK.")
 
 
-def run(research_topic: str = "", blueprint:str="", mod: str = "",
+def run(research_topic: str = "", blueprint:str="", role: str = "",
         resume_latest_session: bool = False, resume_instruction: str = "",
         only_run_planning: bool = False, skip_permissions: bool = False,
         no_human_in_the_loop: bool = False) -> int:
@@ -231,15 +264,15 @@ def run(research_topic: str = "", blueprint:str="", mod: str = "",
     _check_ssh_connectivity()
 
     if only_run_planning:
-        assert mod == "leader", "only_run_planning mode is only applicable for leader mode"
+        assert role == "leader", "only_run_planning role is only applicable for leader role"
 
     if no_human_in_the_loop:
-        assert mod == "leader", "--no-human-in-the-loop is only applicable for leader mode"
+        assert role == "leader", "--no-human-in-the-loop is only applicable for leader role"
         assert not only_run_planning, "--no-human-in-the-loop conflicts with --only-run-planning"
         assert not resume_latest_session, "--no-human-in-the-loop conflicts with --resume"
         assert not resume_instruction, "--no-human-in-the-loop conflicts with --resume-instruction"
 
-    if mod == "leader":
+    if role == "leader":
         if no_human_in_the_loop:
             leader_skill_path = str(_PACKAGE_DIR / "skills" / "leader_experiment.no_human.md")
         else:
@@ -249,9 +282,10 @@ def run(research_topic: str = "", blueprint:str="", mod: str = "",
         if os.path.exists(research_topic):
             running_flag = research_topic + ".running_flag"
             with open(research_topic, "r") as f:
-                research_topic = f"Research topic:\n{f.read()}"
+                research_topic_text = f"Research topic:\n{f.read()}"
         else:
             running_flag = leader_skill_path + ".running_flag"
+            research_topic_text = ""
 
         with open(running_flag, "w+") as f:
             f.write("Running")
@@ -260,14 +294,14 @@ def run(research_topic: str = "", blueprint:str="", mod: str = "",
             "You are the main research agent, the research lead, responsible for designing, evaluating, and dispatching research plans.\n"
             f"Experiment skill: {leader_skill_path}\n"
             f"After all experiments are complete and the final report is written, please delete {running_flag}\n"
-            f"{research_topic}\n"
+            f"{research_topic_text}\n"
             f"{resume_instruction}\n"
         )
 
         if only_run_planning:
             prompt += "Only generate the research plan and exit without running the experiments."
 
-    elif mod == "worker":
+    elif role == "worker":
         worker_skill_path = str(_PACKAGE_DIR / "skills" / "worker_experiment.md")
         worker_blueprint_path = os.path.abspath(blueprint)
         assert os.path.exists(worker_skill_path), f"skill not found: {worker_skill_path}"
@@ -290,23 +324,26 @@ def run(research_topic: str = "", blueprint:str="", mod: str = "",
 
 
 
-    _ensure_opencode_web(skip_permissions=skip_permissions)
-    run_args = ["run", f"--attach=http://localhost:4096", prompt]
+    _ensure_opencode_web(skip_permissions=skip_permissions, role=role)
+    run_args = ["run", "--title", research_topic, f"--attach=http://localhost:4096", prompt]
 
     print("[controller message]: run opencode 1st ...")
     session_id = None
     if resume_latest_session:
         terminated_due_to_permission = False
-        latest = _get_latest_opencode_session()
+        latest = _get_opencode_session_from_title(title=research_topic)
         if latest:
             session_id, title = latest
             print_dict({"session_id": session_id, "title": title}, header="Resuming latest session")
         else:
             raise RuntimeError("No opencode session found to resume.")
     else:
-        returncode, terminated_due_to_permission, session_id = run_opencode(run_args, skip_permissions=skip_permissions)
+        # delete existing session with the same title to avoid confusion
+        _delete_opencode_session_from_title(title=research_topic)
+        returncode, terminated_due_to_permission, session_id = run_opencode(run_args, skip_permissions=skip_permissions, research_topic=research_topic)
         print(f"[controller message]: Session ID from first run: {session_id}")
         if only_run_planning:
+            print_dict({"end reason": "[controller message]: planning role, waiting user feedback (alpha-rl-resume-planning or alpha-rl-begin-experiments)."})
             return returncode
 
 
@@ -321,14 +358,16 @@ def run(research_topic: str = "", blueprint:str="", mod: str = "",
                 need_permission_error_fix=terminated_due_to_permission,
                 resume_instruction=resume_instruction,
                 skip_permissions=skip_permissions,
+                research_topic=research_topic,
             )
             resume_instruction = ""  # only apply the resume_instruction for one time
             if only_run_planning:
+                print_dict({"end reason": "[controller message]: planning role, waiting user feedback (alpha-rl-resume-planning or alpha-rl-begin-experiments)."})
                 return returncode
         else:
             raise RuntimeError("No session ID detected to continue.")
 
-    if mod == "worker":
+    if role == "worker":
         still_training = "/still_training"
         if os.path.exists(still_training):
             os.remove(still_training)
@@ -344,7 +383,7 @@ def run(research_topic: str = "", blueprint:str="", mod: str = "",
 
 def main():
     parser = argparse.ArgumentParser(prog="opencode_runner")
-    subparsers = parser.add_subparsers(dest="mode", required=True)
+    subparsers = parser.add_subparsers(dest="role", required=True)
 
     # Common arguments
     for sp_name in ("leader", "worker"):
@@ -362,7 +401,7 @@ def main():
     rc = run(
         research_topic=args.research_topic,
         blueprint=args.blueprint,
-        mod=args.mode,
+        role=args.role,
         resume_latest_session=args.resume_latest_session,
         resume_instruction=args.resume_instruction,
         only_run_planning=args.only_run_planning,

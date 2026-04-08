@@ -57,8 +57,8 @@ All accept `--research-topic=<path>`. The `--resume-instruction=<text>` flag is 
 
 | Command | Description |
 |---|---|
-| `alpha-rl-research leader [OPTIONS]` | Full leader mode with all flags |
-| `alpha-rl-research worker [OPTIONS]` | Worker mode (runs on compute nodes) |
+| `alpha-rl-research leader [OPTIONS]` | Full leader role with all flags |
+| `alpha-rl-research worker [OPTIONS]` | Worker role (runs on compute nodes) |
 | `alpha-run-blueprint --blueprint=<path>` | Launch a single experiment blueprint |
 | `alpha-scan-jobs` | List running and recent jobs |
 | `alpha-stop-jobs --stop-job-id=<id>` | Stop a running job (`--delete` to remove) |
@@ -72,7 +72,7 @@ All accept `--research-topic=<path>`. The `--resume-instruction=<text>` flag is 
 --resume-instruction TEXT  Instruction for the resumed session
 --only-run-planning        Generate plan only, don't execute experiments
 --skip-permissions         Use permissive agent config (allow all tools)
---no-human-in-the-loop     Fully autonomous mode, no human review steps
+--no-human-in-the-loop     Fully autonomous role, no human review steps
                            (leader only; conflicts with --only-run-planning,
                            --resume, and --resume-instruction)
 ```
