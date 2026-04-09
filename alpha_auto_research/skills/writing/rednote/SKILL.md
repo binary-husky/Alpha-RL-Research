@@ -15,7 +15,7 @@ description: Convert markdown articles to Xiaohongshu (RedNote) format, includin
     - 一般沿用Markdown文章的标题即可
 
 2. 生成封面
-    - 见 alpha_auto_research/skills/writing/cover/SKILL.md
+    - 见 alpha_auto_research/skills/writing/rednote_cover/SKILL.md
     - 见 alpha_auto_research/skills/banana_image/SKILL.md
 
 3. 生成长文（这个过程比较复杂，请按照以下步骤执行）
