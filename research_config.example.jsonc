@@ -2,10 +2,7 @@
     // Copy this file to research_config.jsonc and fill in real values.
     // research_config.jsonc is gitignored — never commit it.
 
-    // Runner backend: "pai" or "ssh"
-    "runner": "pai",
-
-    // Alibaba Cloud PAI (required when runner = "pai")
+    // Alibaba Cloud PAI (required when --runner pai)
     "alibaba_cloud": {
         "access_key_id": "YOUR_ACCESS_KEY_ID",
         "access_key_secret": "YOUR_ACCESS_KEY_SECRET",
@@ -25,6 +22,14 @@
     "remote_monitor": {
         "remote_url": "https://your.kite_strings.server.com",
         "api_key": "test-secret-api-key"
+    },
+
+    // Banana image generation (optional)
+    "banana_image": {
+        "image_generation_api_base": "https://YOUR_IMAGE_API_HOST",
+        "image_generation_api_key": "YOUR_IMAGE_API_KEY",
+        "image_bed_upload_url": "https://YOUR_IMAGE_BED_HOST/up/v100",
+        "image_bed_api_key": "YOUR_IMAGE_BED_API_KEY"
     },
 
     // SSH runner config (required when runner = "ssh")

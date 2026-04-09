@@ -34,7 +34,7 @@ class PaiExperimentSubagent(ExperimentSubagent):
             tmux send-keys -t "TRAIN" "export SETUPTOOLS_USE_DISTUTILS=local" Enter
             tmux send-keys -t "TRAIN" "export OPENCODE_EXPERIMENTAL_BASH_DEFAULT_TIMEOUT_MS=1800000" Enter
             sleep 5;
-            tmux send-keys -t "TRAIN" "python -m alpha_auto_research.opencode_runner worker --blueprint={blueprint_path}" Enter
+            tmux send-keys -t "TRAIN" "python -m alpha_auto_research.opencode_runner worker --runner=pai --blueprint={blueprint_path}" Enter
             touch /still_training && while true; do [ -f "/still_training" ] || break; sleep 5; done
         """)
 

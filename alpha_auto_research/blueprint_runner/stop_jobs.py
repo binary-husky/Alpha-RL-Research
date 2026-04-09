@@ -28,9 +28,13 @@ def main():
         "--delete", action="store_true",
         help="Also delete the job(s) after stopping.",
     )
+    parser.add_argument(
+        "--runner", type=str, required=True, choices=["ssh", "pai"],
+        help="Backend runner type.",
+    )
     args = parser.parse_args()
 
-    runner = get_runner()
+    runner = get_runner(args.runner)
 
     for job_id in args.stop_job_id:
         print(f"Stopping job {job_id} ...")

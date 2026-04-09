@@ -38,11 +38,8 @@ class ExperimentSubagent(ABC):
         ...
 
 
-def get_runner() -> ExperimentSubagent:
-    """Factory: return the runner configured in research_config.jsonc."""
-    from alpha_auto_research.config import config
-
-    runner_type = config.get("runner", "pai")
+def get_runner(runner_type: str) -> ExperimentSubagent:
+    """Factory: return the runner for the given type ('pai' or 'ssh')."""
 
     if runner_type == "pai":
         from alpha_auto_research.blueprint_runner.pai_runner import PaiExperimentSubagent

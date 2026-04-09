@@ -114,9 +114,9 @@ All accept `--research-topic=<path>`. The `--resume-instruction=<text>` flag is 
 
 ## Runner Backends
 
-The `runner` field in `research_config.jsonc` selects the compute backend:
+The `--runner` CLI argument selects the compute backend (`ssh` or `pai`).
 
-### SSH (`"runner": "ssh"`)
+### SSH (`--runner ssh`)
 
 Launches workers on SSH-accessible machines via tmux sessions. Configure hosts in the `ssh` section:
 
@@ -130,7 +130,7 @@ Launches workers on SSH-accessible machines via tmux sessions. Configure hosts i
 
 Supports localhost with automatic SSH key setup.
 
-### PAI DLC (`"runner": "pai"`)
+### PAI DLC (`--runner pai`)
 
 Launches workers as Alibaba Cloud PAI DLC jobs by cloning a template job. Configure credentials and job defaults in the `alibaba_cloud` and `pai_job_template` sections.
 

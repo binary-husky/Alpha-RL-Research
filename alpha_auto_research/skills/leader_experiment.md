@@ -148,7 +148,7 @@ Here is an example of an experiment blueprint:
 ## How to Start a Batch of Experiments (After Writing Blueprints):
 
 - Generate experiment blueprints at `${subject_dir}/exp_stage_{EXP_STAGE}/blueprints/blueprint_${n}.md`
-- Run `python -m alpha_auto_research.blueprint_runner.blueprint_runner --blueprint=${path_to_blue_print}` to submit the blueprint to the GPU cluster
+- Run `python -m alpha_auto_research.blueprint_runner.blueprint_runner --runner=${runner} --blueprint=${path_to_blue_print}` to submit the blueprint to the GPU cluster
 - Record the returned job_id in `./${subject_dir}/main_research_agent/progress.md`
 - Record task progress in `./${subject_dir}/main_research_agent/progress.md`
 
@@ -159,14 +159,14 @@ Note: remember to batch process. When possible, generate a batch of blueprints b
 
 Every 10 minutes (sleep 600):
 - Check whether [exp_result_dir] contains a `finish.flag` file. If yes, the task is complete; otherwise, continue waiting.
-- Run `python -m alpha_auto_research.blueprint_runner.scan_jobs` to check the current blueprint status (Queuing / Running / Succeeded)
+- Run `python -m alpha_auto_research.blueprint_runner.scan_jobs --runner=${runner}` to check the current blueprint status (Queuing / Running / Succeeded)
 
 
 ## How to Stop Experiments:
 
 - Think twice when you terminate a experiment!
-- Run `python -m alpha_auto_research.blueprint_runner.stop_jobs --stop-job-id=<job_id>` to stop a running job
-- Multiple jobs: `python -m alpha_auto_research.blueprint_runner.stop_jobs --stop-job-id=<id1> --stop-job-id=<id2>`
+- Run `python -m alpha_auto_research.blueprint_runner.stop_jobs --runner=${runner} --stop-job-id=<job_id>` to stop a running job
+- Multiple jobs: `python -m alpha_auto_research.blueprint_runner.stop_jobs --runner=${runner} --stop-job-id=<id1> --stop-job-id=<id2>`
 - To also delete after stopping: add `--delete`
 
 

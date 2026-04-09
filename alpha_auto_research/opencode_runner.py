@@ -4,14 +4,6 @@ Unified OpenCode agent runner — supports both leader and worker modes.
 Leader role:  Orchestrates research via a blueprint, manages a running_flag file.
 Worker role:  Runs inside a PAI DLC node, checks tmux session liveness.
 
-Usage:
-    python -m alpha_auto_research.opencode_runner leader \
-        --attach=http://localhost:4096 \
-        --blueprint=/path/to/blueprint.md \
-        --additional-prompt="..."
-
-    python -m alpha_auto_research.opencode_runner worker \
-        <opencode args...>
 """
 
 import argparse
@@ -23,6 +15,7 @@ import time
 from pathlib import Path
 
 from beast_logger import print_dict
+
 
 _PACKAGE_DIR = Path(__file__).resolve().parent
 
@@ -136,6 +129,7 @@ def run_opencode(args: list[str], *, continue_mode=False, session_id=None,
     existing_sessions = _get_opencode_sessions() if not continue_mode else {}
 
     command = " ".join(cmd)
+    print_dict({"command": command, "continue_mode": continue_mode, "session_id": session_id, "research_topic": research_topic}, header="Launching opencode")
     process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=env)
 
     # Detect new session ID right after spawn (only for new sessions)
@@ -237,8 +231,6 @@ def _should_continue(terminated_due_to_permission: bool, running_flag: str) -> b
 def _check_ssh_connectivity() -> None:
     """Verify SSH connectivity to all configured hosts before starting. Exits on failure."""
     from alpha_auto_research.config import config
-    if config.get("runner") != "ssh":
-        return
     from alpha_auto_research.blueprint_runner.ssh_runner import _run_cmd
     hosts = config.get("ssh", {}).get("hosts", [])
     if not hosts:
@@ -259,9 +251,13 @@ def _check_ssh_connectivity() -> None:
 def run(research_topic: str = "", blueprint:str="", role: str = "",
         resume_latest_session: bool = False, resume_instruction: str = "",
         only_run_planning: bool = False, skip_permissions: bool = False,
-        no_human_in_the_loop: bool = False) -> int:
+        no_human_in_the_loop: bool = False, runner: str = "ssh") -> int:
 
-    _check_ssh_connectivity()
+    session_title = f"research_topic {research_topic} role {role} blueprint {blueprint}"
+    session_title = session_title.replace(" ", "_")  # avoid issues with spaces in title
+
+    if runner == "ssh":
+        _check_ssh_connectivity()
 
     if only_run_planning:
         assert role == "leader", "only_run_planning role is only applicable for leader role"
@@ -292,14 +288,19 @@ def run(research_topic: str = "", blueprint:str="", role: str = "",
 
         prompt = (
             "You are the main research agent, the research lead, responsible for designing, evaluating, and dispatching research plans.\n"
-            f"Experiment skill: {leader_skill_path}\n"
+            f"Experiment skill: {leader_skill_path}, current runner is **{runner}** runner.\n"
             f"After all experiments are complete and the final report is written, please delete {running_flag}\n"
             f"{research_topic_text}\n"
+            f"---\n"
+            f"resume_instruction:\n"
             f"{resume_instruction}\n"
+            f"---\n"
         )
 
         if only_run_planning:
-            prompt += "Only generate the research plan and exit without running the experiments."
+            prompt += "---\n"
+            prompt += "Additionally:\n"
+            prompt += "The user wishes to only generate the research plan or report and exit without running the experiments.\n"
 
     elif role == "worker":
         worker_skill_path = str(_PACKAGE_DIR / "skills" / "worker_experiment.md")
@@ -314,24 +315,25 @@ def run(research_topic: str = "", blueprint:str="", role: str = "",
         prompt = (
             f"Your task is to follow the instructions in {worker_skill_path} and complete the experiment described in blueprint {worker_blueprint_path}.\n"
             f"After the experiment is finally complete, please delete {running_flag}.\n"
+            f"Current runner is **{runner}** runner.\n"
             f"Try everything you can to make the experiment running until reaching the time limit or completing the goal written in the blueprint.\n"
         )
 
     from alpha_auto_research.config import config
-    if config.get("runner") == "ssh":
-        prompt += "---"
+    if runner == "ssh":
+        prompt += "---\n"
         prompt += "Special warning: to run multiple experiments in parallel in same server, you need to arrange CUDA_VISIBLE_DEVICES for each experiment in experiment blueprint.\n"
 
 
 
     _ensure_opencode_web(skip_permissions=skip_permissions, role=role)
-    run_args = ["run", "--title", research_topic, f"--attach=http://localhost:4096", prompt]
+    run_args = ["run", "--title", session_title, f"--attach=http://localhost:4096", prompt]
 
     print("[controller message]: run opencode 1st ...")
     session_id = None
     if resume_latest_session:
         terminated_due_to_permission = False
-        latest = _get_opencode_session_from_title(title=research_topic)
+        latest = _get_opencode_session_from_title(title=session_title)
         if latest:
             session_id, title = latest
             print_dict({"session_id": session_id, "title": title}, header="Resuming latest session")
@@ -339,7 +341,7 @@ def run(research_topic: str = "", blueprint:str="", role: str = "",
             raise RuntimeError("No opencode session found to resume.")
     else:
         # delete existing session with the same title to avoid confusion
-        _delete_opencode_session_from_title(title=research_topic)
+        _delete_opencode_session_from_title(title=session_title)
         returncode, terminated_due_to_permission, session_id = run_opencode(run_args, skip_permissions=skip_permissions, research_topic=research_topic)
         print(f"[controller message]: Session ID from first run: {session_id}")
         if only_run_planning:
@@ -367,6 +369,9 @@ def run(research_topic: str = "", blueprint:str="", role: str = "",
         else:
             raise RuntimeError("No session ID detected to continue.")
 
+        print_dict({"end reason": "[controller message]: wait a few seconds before next round."})
+        time.sleep(60)  # wait a bit before checking the session status again
+
     if role == "worker":
         still_training = "/still_training"
         if os.path.exists(still_training):
@@ -384,11 +389,12 @@ def run(research_topic: str = "", blueprint:str="", role: str = "",
 def main():
     parser = argparse.ArgumentParser(prog="opencode_runner")
     subparsers = parser.add_subparsers(dest="role", required=True)
-
+    from alpha_auto_research.config import config
     # Common arguments
     for sp_name in ("leader", "worker"):
         sp = subparsers.add_parser(sp_name)
         sp.add_argument("--research-topic", default="", help="Extra instruction")
+        sp.add_argument("--runner", required=True, choices=["ssh", "pai"], help="use ssh, or pai (alibaba cloud platform)")
         sp.add_argument("--blueprint", default="", help="Path to research skill .md")
         sp.add_argument("--resume", "--resume-latest-session", action="store_true", dest="resume_latest_session", help="Resume the latest session")
         sp.add_argument("--resume-instruction", default="", help="Instruction for resuming")
@@ -407,6 +413,7 @@ def main():
         only_run_planning=args.only_run_planning,
         skip_permissions=args.skip_permissions,
         no_human_in_the_loop=getattr(args, "no_human_in_the_loop", False),
+        runner=args.runner,
     )
     sys.exit(rc)
 

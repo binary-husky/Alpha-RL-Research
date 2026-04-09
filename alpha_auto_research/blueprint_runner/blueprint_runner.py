@@ -15,9 +15,10 @@ from alpha_auto_research.blueprint_runner.base import get_runner
 def run_blueprint():
     parser = argparse.ArgumentParser()
     parser.add_argument('--blueprint', type=str, required=True, help='Path to the blueprint to run')
+    parser.add_argument('--runner', type=str, required=True, choices=['ssh', 'pai'], help='Backend runner type')
     args = parser.parse_args()
 
-    runner = get_runner()
+    runner = get_runner(args.runner)
     job_id = runner.launch(blueprint_path=args.blueprint, exp_name="")
     print(f"Job submitted: {job_id}")
 
