@@ -19,7 +19,7 @@ You are the main research agent, the research lead, responsible for designing, e
     - Generate the first batch of experiment yamls in `${subject_dir}/exp_stage_1/blueprints/blueprint_${n}.yaml`.
     - Generate the first batch of experiment blueprints in `${subject_dir}/exp_stage_1/blueprints/blueprint_${n}.md`.
 
-3. [Step 3] Double check the generated yamls and blueprints, ensure they provide valid and effective path and instructions.
+3. [Step 3] Double check the generated yamls and blueprints, ensure they provide valid and effective path and instructions (check "AgentJet YAML Configuration Warnings" and ensure all warnings are addressed).
 
 4. [Step 4] EXP_STAGE = 1
 
@@ -197,14 +197,16 @@ Every 10 minutes (sleep 600):
 
 ## AgentJet YAML Configuration Warnings:
 
+When writing blueprints and YAML files, please ensure the following AgentJet configurations are set correctly:
+
 `ajet.execute_test` should be False, because when enabled, training will be interrupted if the training reward score falls below a pre-defined threshold.
 `ajet.project_name` the current research task name; recommended to keep consistent across all blueprints for easier swanlab curve comparison.
 `ajet.experiment_name` the current experiment name; different blueprints and stages should have different experiment names.
 `ajet.trainer_common.n_gpus_per_node` should be as few as possible.
 `ajet.trainer_common.test_freq` should be `${TestFreq}`. `${TestFreq}=10`.
 `ajet.trainer_common.save_freq` should be large enough; we do not save checkpoints.
-`ajet.trainer_common.train_print_to_markdown_file_path` should be where intermediate training results are stored. Not critical, but should still be specified.
-`ajet.trainer_common.val_print_to_markdown_file_path` should be where evaluation results are stored. Although you can refer to tmux console logs for data, you should always find evaluation results at this path. Val attribute list:
+`ajet.trainer_common.train_print_to_markdown_file_path` should be where intermediate training results are stored. Not critical, but should still be specified. This file should be written into `exp_result_dir`.
+`ajet.trainer_common.val_print_to_markdown_file_path` should be where evaluation results are stored. Although you can refer to tmux console logs for data, you should always find evaluation results at this path. This file should also be written into `exp_result_dir`. Val attribute list:
     pass_n: For each task, how many times to run repeatedly.
     total_tasks: Number of tasks in the validation dataset.
     num_all_success_tasks: Number of tasks achieving 100% success rate.

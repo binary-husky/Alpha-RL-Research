@@ -13,11 +13,50 @@ import subprocess
 import sys
 import time
 from pathlib import Path
-
 from beast_logger import print_dict
+from alpha_auto_research.utils.install_skills import install_skills
 
+
+
+# ---------------------------------------------------------------------------
+# Opencode config management
+# ---------------------------------------------------------------------------
 
 _PACKAGE_DIR = Path(__file__).resolve().parent
+_RESEARCH_OPENCODE_JSON = Path.cwd() / "research_opencode.json"
+
+
+def _get_opencode_config(skip_permissions: bool = False) -> str:
+    """Return the path to the opencode config to use.
+
+    If skip_permissions is True, creates research_opencode.yolo.json in cwd
+    with permissive permissions and returns its path.
+    Otherwise returns the path to research_opencode.json.
+    """
+    if not skip_permissions:
+        return str(_RESEARCH_OPENCODE_JSON)
+    dst = Path.cwd() / "research_opencode.yolo.json"
+    with open(_RESEARCH_OPENCODE_JSON, "r") as f:
+        config = json.load(f)
+    config["permission"] = {"*": {"*": "allow"}}
+    with open(dst, "w") as f:
+        json.dump(config, f, indent=2)
+    return str(dst)
+
+
+def _load_research_opencode_config() -> None:
+    """Set OPENCODE_CONFIG to research_opencode.json in current working directory.
+
+    Raises FileNotFoundError if research_opencode.json does not exist.
+    """
+    if not _RESEARCH_OPENCODE_JSON.exists():
+        raise FileNotFoundError(
+            f"research_opencode.json not found in current working directory ({Path.cwd()}). "
+            f"Please create it (see research_opencode.example.json for reference)."
+        )
+    os.environ["OPENCODE_CONFIG"] = str(_RESEARCH_OPENCODE_JSON)
+    print_dict({"OPENCODE_CONFIG": str(_RESEARCH_OPENCODE_JSON)}, header="Loaded research_opencode.json")
+
 
 # ---------------------------------------------------------------------------
 # Shared helpers
@@ -77,26 +116,6 @@ def _delete_opencode_session_from_title(title="") -> None:
             subprocess.run(["opencode", "session", "delete", session_id])
 
 
-def _prepare_yolo_config():
-    """Copy opencode.json to opencode-yolo.json with permissive permissions."""
-    config_dir = os.path.expanduser("~/.config/opencode")
-    src = os.path.join(config_dir, "opencode.json")
-    dst = os.path.join(config_dir, "opencode-yolo.json")
-
-    if os.path.exists(src):
-        with open(src, "r") as f:
-            config = json.load(f)
-    else:
-        config = {"$schema": "https://opencode.ai/config.json"}
-
-    config["permission"] = {"*": {"*": "allow"}}
-
-    os.makedirs(config_dir, exist_ok=True)
-    with open(dst, "w") as f:
-        json.dump(config, f, indent=2)
-
-    return dst
-
 
 def run_opencode(session_title=None,
                  opencode_web_url=None,
@@ -133,13 +152,10 @@ def run_opencode(session_title=None,
         assert session_title is not None
         assert opencode_web_url is not None
         assert prompt is not None
-        cmd = ["opencode", "run", "--title", session_title, "--attach", opencode_web_url, prompt]
+        cmd = ["opencode", "run", "--format", "json", "--title", session_title, "--attach", opencode_web_url, prompt]
 
 
-    env = None
-    if skip_permissions:
-        yolo_config = _prepare_yolo_config()
-        env = {**os.environ, "OPENCODE_CONFIG": yolo_config}
+    env = {**os.environ, "OPENCODE_CONFIG": _get_opencode_config(skip_permissions)}
 
     # Snapshot existing sessions before spawning so we can detect the new one
     existing_sessions = _get_opencode_sessions() if not continue_mode else {}
@@ -187,10 +203,7 @@ def run_opencode(session_title=None,
 def _ensure_opencode_web(skip_permissions=False, role="leader"):
     from alpha_auto_research.utils.smart_daemon import LaunchCommandWhenAbsent
 
-    env_dict = {**os.environ}
-    if skip_permissions:
-        yolo_config = _prepare_yolo_config()
-        env_dict["OPENCODE_CONFIG"] = yolo_config
+    env_dict = {**os.environ, "OPENCODE_CONFIG": _get_opencode_config(skip_permissions)}
 
     print("[controller message]: Starting opencode web...")
     opencode_web = LaunchCommandWhenAbsent(
@@ -268,6 +281,10 @@ def run(research_topic: str = "", blueprint:str="", role: str = "",
         resume_latest_session: bool = False, resume_instruction: str = "",
         only_run_planning: bool = False, skip_permissions: bool = False,
         no_human_in_the_loop: bool = False, runner: str = "ssh") -> int:
+
+    _load_research_opencode_config()
+
+    install_skills()
 
     session_title = f"research_topic {research_topic} role {role} blueprint {blueprint}"
     session_title = session_title.replace(" ", "_")  # avoid issues with spaces in title

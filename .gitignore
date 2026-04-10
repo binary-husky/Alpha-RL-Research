@@ -1,5 +1,7 @@
 # Secrets
 research_config.jsonc
+research_opencode.json
+research_opencode.yolo.json
 
 # Data directories (local working data)
 topics/
