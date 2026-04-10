@@ -75,7 +75,7 @@ An experiment blueprint is a markdown file (blueprint.md). It must contain 7 sec
 Generate experiment blueprints at `${subject_dir}/exp_stage_{EXP_STAGE}/blueprints/blueprint_${n}.md`.
 Once blueprints are issued, other agents will execute them. Therefore, each section should have textual explanation — the more detailed the better.
 
-Here is an example of an experiment blueprint:
+Here is an example of an experiment blueprint (for `exp_purpose` ,`exp_codebase_dir` ,`exp_venv_exe` ,`exp_yaml_path` ,`exp_launch_command` ,`exp_result_dir` ,`exp_max_time`, add additonal fields such as `description` and `hint`):
 
 
 <blueprint_example_begin>
@@ -154,6 +154,9 @@ Here is an example of an experiment blueprint:
     - n_gpus_per_node = 8
     - test_freq = 10
     - execute_test = False (mandatory)
+
+    ### Warning:
+    Be careful that venv is relocated at a path, but the codebase maybe located at a different path.
 ```
 
 <blueprint_example_end>
