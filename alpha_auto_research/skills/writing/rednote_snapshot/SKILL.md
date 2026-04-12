@@ -5,6 +5,11 @@ description: Take high-resolution website snapshots for Xiaohongshu/RedNote cont
 
 # Mkdocs 转 小红书图片
 
+## 把 Markdown 文档转化为 Markdown Material，生成 index.md 和 mkdocs.yaml
+
+关于 markdown material，参考 https://github.com/squidfunk/mkdocs-material
+
+
 
 ## 首先后台运行 mkdocs serve
 
