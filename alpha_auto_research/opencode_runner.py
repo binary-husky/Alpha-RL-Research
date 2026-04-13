@@ -9,10 +9,15 @@ Worker role:  Runs inside a PAI DLC node, checks tmux session liveness.
 import argparse
 import json
 import os
+import queue
 import subprocess
 import sys
+import threading
 import time
 from pathlib import Path
+
+# Watchdog: if no new line arrives from opencode for this many seconds, kill it.
+_WATCHDOG_IDLE_TIMEOUT_SEC = 30 * 60
 from beast_logger import print_dict
 from alpha_auto_research.utils.install_skills import install_skills
 from alpha_auto_research.utils.opencode_printer import format_json_line
@@ -142,7 +147,9 @@ def run_opencode(session_title=None,
         if resume_instruction:
             msg = f"Instruction: {resume_instruction}"
         else:
-            msg = "continue your job"
+            msg = "continue your job" \
+                  "\n\n[Tip]: I'm tired of having to tell you to continue over and over again. " \
+                  "You should use the tmux monitor skill (tmux_wait.py) to proactively wait and observe the experiment output for a period of time. "
 
         if need_permission_error_fix:
             msg += ", permission error detected, please try some workaround, e.g. tmux command."
@@ -188,15 +195,55 @@ def run_opencode(session_title=None,
 
 
     terminated_due_to_permission = False
-    for stream in (process.stdout, process.stderr):
-        if stream:
+
+    # Drain stdout/stderr via background threads into a queue so the main
+    # loop can enforce an idle-timeout watchdog: if no line arrives for
+    # _WATCHDOG_IDLE_TIMEOUT_SEC, kill the process.
+    line_queue: "queue.Queue[tuple[str, str] | None]" = queue.Queue()
+
+    def _drain(stream, name):
+        try:
             for line in stream:
-                if not format_json_line(line):
-                    # Not JSON — print raw (stderr or non-json stdout)
-                    print(line, end="")
-                if "The user rejected permission to use this specific tool call" in line:
-                    print("[controller message]: Tool call was rejected by permission settings.")
-                    terminated_due_to_permission = True
+                line_queue.put((name, line))
+        finally:
+            line_queue.put(None)  # sentinel: this stream is done
+
+    drainers = []
+    for stream, name in ((process.stdout, "stdout"), (process.stderr, "stderr")):
+        if stream:
+            t = threading.Thread(target=_drain, args=(stream, name), daemon=True)
+            t.start()
+            drainers.append(t)
+
+    pending_sentinels = len(drainers)
+    watchdog_killed = False
+    while pending_sentinels > 0:
+        try:
+            item = line_queue.get(timeout=_WATCHDOG_IDLE_TIMEOUT_SEC)
+        except queue.Empty:
+            print(f"[controller message]: Watchdog: no output for {_WATCHDOG_IDLE_TIMEOUT_SEC}s, killing opencode process.")
+            terminated_due_to_permission = True
+            watchdog_killed = True
+            try:
+                process.kill()
+            except Exception as e:
+                print(f"[controller message]: Failed to kill process: {e}")
+            break
+        if item is None:
+            pending_sentinels -= 1
+            continue
+        _, line = item
+        if not format_json_line(line):
+            # Not JSON — print raw (stderr or non-json stdout)
+            print(line, end="")
+        if "The user rejected permission to use this specific tool call" in line:
+            print("[controller message]: Tool call was rejected by permission settings.")
+            terminated_due_to_permission = True
+
+    if watchdog_killed:
+        # Give drainer threads a moment to finish after the kill so pipes close.
+        for t in drainers:
+            t.join(timeout=5)
 
     process.wait()
     print(f"[controller message]: Return code: {process.returncode}, permission_error={terminated_due_to_permission}")
@@ -340,10 +387,15 @@ def run(research_topic: str = "", blueprint:str="", role: str = "",
             f"After all experiments are complete and the final report is written, please delete {running_flag}\n"
             f"{research_topic_text}\n"
             f"---\n"
-            f"resume_instruction:\n"
-            f"{resume_instruction}\n"
-            f"---\n"
+
         )
+
+        if resume_instruction.strip():
+            prompt += (
+                f"resume_instruction:\n"
+                f"{resume_instruction}\n"
+                f"---\n"
+            )
 
         if only_run_planning:
             prompt += "---\n"

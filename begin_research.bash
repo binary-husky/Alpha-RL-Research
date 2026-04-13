@@ -125,3 +125,16 @@ alpha-rl-resume-experiment \
 alpha-rl-new-research-no-human \
     --runner=ssh \
     --research-topic="research_topic/example_06_ppo_epoch_and_minibatch.md"
+
+
+
+
+alpha-rl-new-research-no-human \
+    --runner=ssh \
+    --research-topic="research_topic/example_07_aime_learner.md"
+
+alpha-rl-new-research-no-human \
+    --runner=ssh \
+    --research-topic="research_topic/example_08_werewolves_study.md"
+
+
