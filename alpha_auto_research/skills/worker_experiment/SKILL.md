@@ -291,3 +291,5 @@ And never use `--autokill` argument, that will destory all running experiments r
 - You must not edit `research_config.jsonc` in any circumstances!
 - When encounter any error, you should check experiment blueprint, and double check you have followed all the instructions in the blueprint (e.g. venv, additional service installation)!
 - You can ignore all hermes_tool_parser errors, they do not matter.
+- Do not use `sleep` ! use `tmux_wait.py` instead.
+- when you see **KeyboardInterrupt**, that means I'm **angry** that you ignore **terrible errors** printed in console and let experiment resume and waste time.
