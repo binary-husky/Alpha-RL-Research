@@ -800,14 +800,16 @@ def main():
         sp = subparsers.add_parser(sp_name)
         sp.add_argument("--backend", default="claude", choices=list(_BACKENDS),
                         help="Code agent backend: claude/cc or opencode (default: claude)")
-        sp.add_argument("--research-topic", default="", help="Research topic or path to topic file")
-        sp.add_argument("--runner", required=True, choices=["ssh", "pai"],
-                        help="Use ssh or pai (Alibaba Cloud)")
+        sp.add_argument("--topic", "--research-topic", default="", dest="research_topic",
+                        help="Research topic or path to topic file")
+        sp.add_argument("--runner", default="ssh", choices=["ssh", "pai"],
+                        help="Use ssh (default) or pai (Alibaba Cloud)")
         sp.add_argument("--blueprint", default="", help="Path to blueprint .md file")
         sp.add_argument("--resume", "--resume-latest-session", action="store_true",
                         dest="resume_latest_session",
                         help="Resume the latest session (found by session name)")
-        sp.add_argument("--resume-instruction", default="", help="Instruction for resuming")
+        sp.add_argument("-r", "--resume-instruction", default="", dest="resume_instruction",
+                        help="Instruction for resuming")
         sp.add_argument("--only-run-planning", action="store_true", help="Run planning only and exit")
         sp.add_argument("--skip-permissions", action="store_true",
                         help="Skip all permission checks")

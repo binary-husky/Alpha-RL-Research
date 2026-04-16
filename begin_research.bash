@@ -6,84 +6,84 @@ git clone https://github.com/modelscope/AgentJet.git codebase/agentjet
 
 ## topic 01
 # plan first
-alpha-rl-new-planning \
+alpha-new-plan \
     --runner=ssh \
-    --research-topic="research_topic/example_01_content_madness_detect.md"
+    --topic="research_topic/example_01_content_madness_detect.md"
 # confirm execution
-alpha-rl-begin-experiments \
+alpha-resume \
     --runner=ssh \
-    --research-topic="research_topic/example_01_content_madness_detect.md" \
-    --resume-instruction="permission granted, begin research"
+    --topic="research_topic/example_01_content_madness_detect.md" \
+    -r "permission granted, begin research"
 
 
 
 ## topic 02
 # plan first
-alpha-rl-new-planning \
+alpha-new-plan \
     --runner=ssh \
-    --research-topic="research_topic/example_02_kl_abl.md"
+    --topic="research_topic/example_02_kl_abl.md"
 # confirm execution
-alpha-rl-begin-experiments \
+alpha-resume \
     --runner=ssh \
-    --research-topic="research_topic/example_02_kl_abl.md" \
-    --resume-instruction="permission granted, begin research"
+    --topic="research_topic/example_02_kl_abl.md" \
+    -r "permission granted, begin research"
 
 # resume from broken (without context)
-alpha-rl-new-planning \
+alpha-new-plan \
     --runner=ssh \
-    --research-topic="research_topic/example_02_kl_abl.md" \
-    --resume-instruction="Experiment submission failed, but now the problem resolved, try again."
+    --topic="research_topic/example_02_kl_abl.md" \
+    -r "Experiment submission failed, but now the problem resolved, try again."
 
 
 
 ## topic 02-resume from blueprints
 # resume from broken (without context)
-alpha-rl-new-research-no-human \
+alpha-auto \
     --runner=ssh \
-    --research-topic="research_topic/example_02_kl_abl.md"
-alpha-rl-resume-experiment \
+    --topic="research_topic/example_02_kl_abl.md"
+alpha-resume \
     --runner=ssh \
-    --research-topic="research_topic/example_02_kl_abl.md" \
-    --resume-instruction="Why don't you try to analyze all possible outcomes while the experiment is running. write a report and keep waiting for the experiment result."
+    --topic="research_topic/example_02_kl_abl.md" \
+    -r "Why don't you try to analyze all possible outcomes while the experiment is running. write a report and keep waiting for the experiment result."
 
 
 
 ## topic 03
 # plan first
-alpha-rl-new-planning \
+alpha-new-plan \
     --runner=pai \
-    --research-topic="research_topic/example_03_appworld.md"
+    --topic="research_topic/example_03_appworld.md"
 # polish plan
-alpha-rl-resume-planning \
+alpha-resume-plan \
     --runner=pai \
-    --research-topic="research_topic/example_03_appworld.md" \
-    --resume-instruction="polish your plan"
+    --topic="research_topic/example_03_appworld.md" \
+    -r "polish your plan"
 # confirm execution
-alpha-rl-begin-experiments \
+alpha-resume \
     --runner=pai \
-    --research-topic="research_topic/example_03_appworld.md" \
-    --resume-instruction="permission granted, begin research"
+    --topic="research_topic/example_03_appworld.md" \
+    -r "permission granted, begin research"
 
 # resume from broken (without context)
-alpha-rl-new-planning \
+alpha-new-plan \
     --runner=pai \
-    --research-topic="research_topic/example_03_appworld.md" \
-    --resume-instruction="Double check planning, revise it."
+    --topic="research_topic/example_03_appworld.md" \
+    -r "Double check planning, revise it."
 #
-alpha-rl-resume-experiment \
+alpha-resume \
     --runner=pai \
-    --research-topic="research_topic/example_03_appworld.md" \
-    --resume-instruction="the experiment is finished, write report"
+    --topic="research_topic/example_03_appworld.md" \
+    -r "the experiment is finished, write report"
 
 # finalize
-alpha-rl-new-planning \
+alpha-new-plan \
     --runner=pai \
-    --research-topic="research_topic/example_03_appworld.md" \
-    --resume-instruction="the experiment is finished, write report"
-alpha-rl-resume-planning \
+    --topic="research_topic/example_03_appworld.md" \
+    -r "the experiment is finished, write report"
+alpha-resume-plan \
     --runner=pai \
-    --research-topic="research_topic/example_03_appworld.md" \
-    --resume-instruction="use seaborn! show as many details as possible, make it look good! write report in markdown format with figures included."
+    --topic="research_topic/example_03_appworld.md" \
+    -r "use seaborn! show as many details as possible, make it look good! write report in markdown format with figures included."
 
 
 
@@ -95,46 +95,46 @@ alpha-rl-resume-planning \
 ## topic 04
 # plan first
 ccfq \
-alpha-rl-new-planning \
+alpha-new-plan \
     --runner=pai \
-    --research-topic="research_topic/example_04_ppo_epoch.md"
+    --topic="research_topic/example_04_ppo_epoch.md"
 
 
 ## topic 04
 # plan first
-alpha-rl-new-research-no-human \
+alpha-auto \
     --runner=pai \
-    --research-topic="research_topic/example_04_ppo_epoch.md"
+    --topic="research_topic/example_04_ppo_epoch.md"
 
 
 ## topic 05
 # plan first
-alpha-rl-new-research-no-human \
+alpha-auto \
     --runner=ssh \
-    --research-topic="research_topic/example_05_regular_test.md"
+    --topic="research_topic/example_05_regular_test.md"
 
 #
-alpha-rl-resume-experiment \
+alpha-resume \
     --runner=pai \
-    --research-topic="research_topic/example_05_regular_test.md" \
-    --resume-instruction="the experiment is running, keep monitoring"
+    --topic="research_topic/example_05_regular_test.md" \
+    -r "the experiment is running, keep monitoring"
 
 
 
 
-alpha-rl-new-research-no-human \
+alpha-auto \
     --runner=ssh \
-    --research-topic="research_topic/example_06_ppo_epoch_and_minibatch.md"
+    --topic="research_topic/example_06_ppo_epoch_and_minibatch.md"
 
 
 
 
-alpha-rl-new-research-no-human \
+alpha-auto \
     --runner=ssh \
-    --research-topic="research_topic/example_07_aime_learner.md"
+    --topic="research_topic/example_07_aime_learner.md"
 
-alpha-rl-new-research-no-human \
+alpha-auto \
     --runner=ssh \
-    --research-topic="research_topic/example_08_werewolves_study.md"
+    --topic="research_topic/example_08_werewolves_study.md"
 
 

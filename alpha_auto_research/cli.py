@@ -16,25 +16,30 @@ def _inject_and_run(extra_args: list[str]):
 
 
 def new_planning():
-    """alpha_rl_research_new_planning — plan from scratch."""
+    """alpha-new-plan — plan from scratch."""
     _inject_and_run(["--only-run-planning"])
 
 
 def resume_planning():
-    """alpha_rl_research_resume_planning — resume an existing plan."""
+    """alpha-resume-plan — resume an existing plan."""
     _inject_and_run(["--resume", "--only-run-planning"])
 
 
-def begin_experiments():
-    """alpha_rl_research_begin_experiments — start executing experiments."""
-    _inject_and_run(["--resume"])
-
-
 def resume_experiment():
-    """alpha_rl_research_resume_experiment — resume experiment execution."""
+    """alpha-resume — resume experiment execution (also starts experiments after planning)."""
     _inject_and_run(["--resume"])
 
 
-def new_research_no_human():
-    """alpha_rl_research_new_research_no_human — fully autonomous research, no human review."""
+def fully_auto():
+    """alpha-auto — fully autonomous research, no human review."""
     _inject_and_run(["--no-human-in-the-loop"])
+
+
+def beta():
+    """beta <blueprint_path> — run a worker with the given blueprint."""
+    if len(sys.argv) < 2:
+        print("Usage: beta <blueprint_path>")
+        sys.exit(1)
+    blueprint_path = sys.argv[1]
+    sys.argv = [sys.argv[0], "worker", "--skip-permissions", "--blueprint", blueprint_path, *sys.argv[2:]]
+    _main()

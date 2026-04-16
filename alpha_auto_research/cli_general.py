@@ -17,25 +17,20 @@ def _inject_and_run(extra_args: list[str]):
 
 
 def new_planning():
-    """Plan from scratch."""
+    """alpha-g-new-plan — plan from scratch."""
     _inject_and_run(["--only-run-planning"])
 
 
 def resume_planning():
-    """Resume an existing plan."""
+    """alpha-g-resume-plan — resume an existing plan."""
     _inject_and_run(["--resume", "--only-run-planning"])
 
 
-def begin_experiments():
-    """Start executing experiments."""
-    _inject_and_run(["--resume"])
-
-
 def resume_experiment():
-    """Resume experiment execution."""
+    """alpha-g-resume — resume experiment execution (also starts experiments after planning)."""
     _inject_and_run(["--resume"])
 
 
-def new_research_no_human():
-    """Fully autonomous research, no human review."""
+def fully_auto():
+    """alpha-g-auto — fully autonomous research, no human review."""
     _inject_and_run(["--no-human-in-the-loop"])

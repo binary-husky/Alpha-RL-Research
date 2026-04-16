@@ -26,7 +26,7 @@ An experiment blueprint is a markdown file (blueprint.md). It contains 7 section
     The **absolute path** containing all code needed to run the experiment. Relatively small in size. Does not include the Python virtual environment. Remember to cd to this path before starting the experiment.
 3. [exp_venv_exe] Python virtual environment path (absolute path to python executable):
     Path to the Python executable. E.g.: /mnt/data_cpfs/agentjet/project/.venv/bin/python
-4. [exp_yaml_path] Experiment config file path (absolute path):
+4. [exp_yaml_path] Experiment config file path (absolute path) (may not exist in swarm training mode):
     Path to the experiment configuration YAML file. This file must be located within the main experiment code path. E.g.: /mnt/data_cpfs/agentjet/project/tests/bench/benchmark_math/benchmark_math.yaml
 5. [exp_launch_command] Training execution command (string):
     E.g. python -m ajet.launcher --conf tests/bench/benchmark_math/benchmark_math.yaml --skip-check-avail-gpu --with-ray

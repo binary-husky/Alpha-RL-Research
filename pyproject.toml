@@ -31,24 +31,15 @@ alpha-scan-jobs = "alpha_auto_research.blueprint_runner.scan_jobs:main"
 alpha-stop-jobs = "alpha_auto_research.blueprint_runner.stop_jobs:main"
 
 # Convenience aliases matching begin_research.bash
-alpha-rl-new-planning = "alpha_auto_research.cli:new_planning"
-alpha-rl-resume-planning = "alpha_auto_research.cli:resume_planning"
-alpha-rl-begin-experiments = "alpha_auto_research.cli:begin_experiments"
-alpha-rl-resume-experiment = "alpha_auto_research.cli:resume_experiment"
-alpha-rl-new-research-no-human = "alpha_auto_research.cli:new_research_no_human"
-
-# claudecode_runner
-alpha-rl-research-claude = "alpha_auto_research.claudecode_runner:main"
-alpha-rl-cc-new-planning = "alpha_auto_research.cli_claudecode:new_planning"
-alpha-rl-cc-resume-planning = "alpha_auto_research.cli_claudecode:resume_planning"
-alpha-rl-cc-begin-experiments = "alpha_auto_research.cli_claudecode:begin_experiments"
-alpha-rl-cc-resume-experiment = "alpha_auto_research.cli_claudecode:resume_experiment"
-alpha-rl-cc-new-research-no-human = "alpha_auto_research.cli_claudecode:new_research_no_human"
+alpha-new-plan = "alpha_auto_research.cli:new_planning"
+alpha-resume-plan = "alpha_auto_research.cli:resume_planning"
+alpha-resume = "alpha_auto_research.cli:resume_experiment"
+alpha-auto = "alpha_auto_research.cli:fully_auto"
+beta = "alpha_auto_research.cli:beta"
 
 # general_runner (unified — supports --backend claude/opencode)
 alpha-rl-general = "alpha_auto_research.general_runner:main"
-alpha-rl-g-new-planning = "alpha_auto_research.cli_general:new_planning"
-alpha-rl-g-resume-planning = "alpha_auto_research.cli_general:resume_planning"
-alpha-rl-g-begin-experiments = "alpha_auto_research.cli_general:begin_experiments"
-alpha-rl-g-resume-experiment = "alpha_auto_research.cli_general:resume_experiment"
-alpha-rl-g-new-research-no-human = "alpha_auto_research.cli_general:new_research_no_human"
+alpha-g-new-plan = "alpha_auto_research.cli_general:new_planning"
+alpha-g-resume-plan = "alpha_auto_research.cli_general:resume_planning"
+alpha-g-resume = "alpha_auto_research.cli_general:resume_experiment"
+alpha-g-auto = "alpha_auto_research.cli_general:fully_auto"

@@ -430,7 +430,6 @@ def run(research_topic: str = "", blueprint:str="", role: str = "",
             f"Try everything you can to make the experiment running until reaching the time limit or completing the goal written in the blueprint.\n"
         )
 
-    from alpha_auto_research.config import config
     if runner == "ssh":
         prompt += "---\n"
         prompt += "Special warning: to run multiple experiments in parallel in same server, you need to arrange CUDA_VISIBLE_DEVICES for each experiment in experiment blueprint.\n"
@@ -463,7 +462,7 @@ def run(research_topic: str = "", blueprint:str="", role: str = "",
         )
         print(f"[controller message]: Session ID from first run: {session_id}")
         if only_run_planning:
-            print_dict({"end reason": "[controller message]: planning role, waiting user feedback (alpha-rl-resume-planning or alpha-rl-begin-experiments)."})
+            print_dict({"end reason": "[controller message]: planning role, waiting user feedback (alpha-resume-plan or alpha-resume)."})
             return returncode
 
 
@@ -484,7 +483,7 @@ def run(research_topic: str = "", blueprint:str="", role: str = "",
             )
             resume_instruction = ""  # only apply the resume_instruction for one time
             if only_run_planning:
-                print_dict({"end reason": "[controller message]: planning role, waiting user feedback (alpha-rl-resume-planning or alpha-rl-begin-experiments)."})
+                print_dict({"end reason": "[controller message]: planning role, waiting user feedback (alpha-resume-plan or alpha-resume)."})
                 return returncode
         else:
             raise RuntimeError("No session ID detected to continue.")
@@ -513,11 +512,11 @@ def main():
     # Common arguments
     for sp_name in ("leader", "worker"):
         sp = subparsers.add_parser(sp_name)
-        sp.add_argument("--research-topic", default="", help="Extra instruction")
-        sp.add_argument("--runner", required=True, choices=["ssh", "pai"], help="use ssh, or pai (alibaba cloud platform)")
+        sp.add_argument("--topic", "--research-topic", default="", dest="research_topic", help="Research topic or path to topic file")
+        sp.add_argument("--runner", default="ssh", choices=["ssh", "pai"], help="use ssh (default), or pai (alibaba cloud platform)")
         sp.add_argument("--blueprint", default="", help="Path to research skill .md")
         sp.add_argument("--resume", "--resume-latest-session", action="store_true", dest="resume_latest_session", help="Resume the latest session")
-        sp.add_argument("--resume-instruction", default="", help="Instruction for resuming")
+        sp.add_argument("-r", "--resume-instruction", default="", dest="resume_instruction", help="Instruction for resuming")
         sp.add_argument("--only-run-planning", action="store_true", help="Run once and exit")
         sp.add_argument("--skip-permissions", action="store_true", help="Use permissive opencode config (allow all tools)")
         if sp_name == "leader":

@@ -64,12 +64,12 @@ git clone https://github.com/modelscope/AgentJet.git codebase/agentjet
 
 ```bash
 # 规划一个新的研究课题（使用 SSH 后端）
-alpha-rl-new-planning --runner=ssh --research-topic="research_topic/my_topic.md"
+alpha-new-plan --runner=ssh --topic="research_topic/my_topic.md"
 
 # 审查方案后，确认开始实验
-alpha-rl-begin-experiments --runner=ssh \
-    --research-topic="research_topic/my_topic.md" \
-    --resume-instruction="permission granted, begin research"
+alpha-resume --runner=ssh \
+    --topic="research_topic/my_topic.md" \
+    -r "permission granted, begin research"
 ```
 
 ## CLI 命令参考
@@ -80,13 +80,12 @@ alpha-rl-begin-experiments --runner=ssh \
 
 | 命令 | 说明 |
 |---|---|
-| `alpha-rl-new-planning` | 从零开始规划研究课题 |
-| `alpha-rl-resume-planning` | 恢复并修改已有方案 |
-| `alpha-rl-begin-experiments` | 规划完成后开始执行实验 |
-| `alpha-rl-resume-experiment` | 恢复中断的实验执行 |
-| `alpha-rl-new-research-no-human` | 全自动研究，无需人工审查 |
+| `alpha-new-plan` | 从零开始规划研究课题 |
+| `alpha-resume-plan` | 恢复并修改已有方案 |
+| `alpha-resume` | 开始或恢复实验执行 |
+| `alpha-auto` | 全自动研究，无需人工审查 |
 
-所有命令均接受 `--research-topic=<路径>` 和 `--runner=<ssh|pai>`（必填）。除 `alpha-rl-new-research-no-human` 外，均支持 `--resume-instruction=<文本>` 参数。
+所有命令均接受 `--topic=<路径>` 和 `--runner=<ssh|pai>`（默认 ssh）。除 `alpha-auto` 外，均支持 `-r <文本>` 参数。
 
 ### 核心命令
 
@@ -101,15 +100,15 @@ alpha-rl-begin-experiments --runner=ssh \
 ### Leader 参数
 
 ```
---research-topic PATH      研究课题文件路径或内联文本
+--topic PATH               研究课题文件路径或内联文本
 --blueprint PATH           研究技能 .md 文件路径
 --resume                   恢复最近的会话
---resume-instruction TEXT   恢复会话时的指令
+-r, --resume-instruction   恢复会话时的指令
 --only-run-planning        仅生成方案，不执行实验
 --skip-permissions         使用宽松的 Agent 配置（允许所有工具）
 --no-human-in-the-loop     全自动模式，无人工审查步骤
                            （仅限 leader；与 --only-run-planning、
-                           --resume 和 --resume-instruction 冲突）
+                           --resume 和 -r 冲突）
 ```
 
 ## 系统架构
@@ -261,84 +260,84 @@ alpha_auto_research/
 
 ```bash
 # 第一步：生成研究方案（Leader 读取课题，设计实验）
-alpha-rl-new-planning \
+alpha-new-plan \
     --runner=ssh \
-    --research-topic="research_topic/example_01_content_madness_detect.md"
+    --topic="research_topic/example_01_content_madness_detect.md"
 
 # 第二步：审查方案后，确认开始执行
-alpha-rl-begin-experiments \
+alpha-resume \
     --runner=ssh \
-    --research-topic="research_topic/example_01_content_madness_detect.md" \
-    --resume-instruction="permission granted, begin research"
+    --topic="research_topic/example_01_content_madness_detect.md" \
+    -r "permission granted, begin research"
 ```
 
 ### 迭代规划：执行前反复打磨方案
 
 ```bash
 # 生成初始方案
-alpha-rl-new-planning \
+alpha-new-plan \
     --runner=ssh \
-    --research-topic="research_topic/example_02_kl_abl.md"
+    --topic="research_topic/example_02_kl_abl.md"
 
 # 用具体指令修改方案
-alpha-rl-resume-planning \
+alpha-resume-plan \
     --runner=ssh \
-    --research-topic="research_topic/example_02_kl_abl.md" \
-    --resume-instruction="max_env_worker: 64 -> 128, max_num_seqs->1024, revise your plan accordingly"
+    --topic="research_topic/example_02_kl_abl.md" \
+    -r "max_env_worker: 64 -> 128, max_num_seqs->1024, revise your plan accordingly"
 
 # 确认执行
-alpha-rl-begin-experiments \
+alpha-resume \
     --runner=ssh \
-    --research-topic="research_topic/example_02_kl_abl.md" \
-    --resume-instruction="permission granted, begin research"
+    --topic="research_topic/example_02_kl_abl.md" \
+    -r "permission granted, begin research"
 ```
 
 ### 使用阿里云 PAI DLC 执行
 
 ```bash
-alpha-rl-new-planning \
+alpha-new-plan \
     --runner=pai \
-    --research-topic="research_topic/example_03_appworld.md"
+    --topic="research_topic/example_03_appworld.md"
 
-alpha-rl-resume-planning \
+alpha-resume-plan \
     --runner=pai \
-    --research-topic="research_topic/example_03_appworld.md" \
-    --resume-instruction="polish your plan"
+    --topic="research_topic/example_03_appworld.md" \
+    -r "polish your plan"
 
-alpha-rl-begin-experiments \
+alpha-resume \
     --runner=pai \
-    --research-topic="research_topic/example_03_appworld.md" \
-    --resume-instruction="permission granted, begin research"
+    --topic="research_topic/example_03_appworld.md" \
+    -r "permission granted, begin research"
 ```
 
 ### 断点恢复与报告生成
 
 ```bash
 # 以纠正性指令恢复中断的实验
-alpha-rl-new-planning \
+alpha-new-plan \
     --runner=ssh \
-    --research-topic="research_topic/example_02_kl_abl.md" \
-    --resume-instruction="Look at what you have done! Yaml is all wrong, refer to agentjet/ajet/default_config/ajet_default.yaml"
+    --topic="research_topic/example_02_kl_abl.md" \
+    -r "Look at what you have done! Yaml is all wrong, refer to agentjet/ajet/default_config/ajet_default.yaml"
 
 # 实验完成后，告诉 Leader 撰写最终报告
-alpha-rl-resume-experiment \
+alpha-resume \
     --runner=pai \
-    --research-topic="research_topic/example_03_appworld.md" \
-    --resume-instruction="the experiment is finished, write report"
+    --topic="research_topic/example_03_appworld.md" \
+    -r "the experiment is finished, write report"
 
 # 自定义报告风格
-alpha-rl-resume-planning \
+alpha-resume-plan \
     --runner=pai \
-    --research-topic="research_topic/example_03_appworld.md" \
-    --resume-instruction="use seaborn! show as many details as possible, write report in markdown format with figures included."
+    --topic="research_topic/example_03_appworld.md" \
+    -r "use seaborn! show as many details as possible, write report in markdown format with figures included."
 ```
 
 ### 全自动模式（无人工审查）
 
 ```bash
-alpha-rl-new-research-no-human \
+alpha-auto \
     --runner=ssh \
-    --research-topic="research_topic/my_topic.md"
+    --topic="research_topic/my_topic.md"
 ```
 
 ### 任务管理

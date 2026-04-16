@@ -65,12 +65,12 @@ git clone https://github.com/modelscope/AgentJet.git codebase/agentjet
 
 ```bash
 # Plan a new research topic (using SSH backend)
-alpha-rl-new-planning --runner=ssh --research-topic="research_topic/my_topic.md"
+alpha-new-plan --runner=ssh --topic="research_topic/my_topic.md"
 
 # Review the plan, then begin experiments
-alpha-rl-begin-experiments --runner=ssh \
-    --research-topic="research_topic/my_topic.md" \
-    --resume-instruction="permission granted, begin research"
+alpha-resume --runner=ssh \
+    --topic="research_topic/my_topic.md" \
+    -r "permission granted, begin research"
 ```
 
 ## CLI Reference
@@ -81,13 +81,12 @@ After `pip install -e .`, the following commands are available:
 
 | Command | Description |
 |---|---|
-| `alpha-rl-new-planning` | Plan a research topic from scratch |
-| `alpha-rl-resume-planning` | Resume and refine an existing plan |
-| `alpha-rl-begin-experiments` | Start executing experiments after planning |
-| `alpha-rl-resume-experiment` | Resume interrupted experiment execution |
-| `alpha-rl-new-research-no-human` | Fully autonomous research, no human review |
+| `alpha-new-plan` | Plan a research topic from scratch |
+| `alpha-resume-plan` | Resume and refine an existing plan |
+| `alpha-resume` | Start or resume experiment execution |
+| `alpha-auto` | Fully autonomous research, no human review |
 
-All accept `--research-topic=<path>` and `--runner=<ssh|pai>` (required). The `--resume-instruction=<text>` flag is available on all except `alpha-rl-new-research-no-human`.
+All accept `--topic=<path>` and `--runner=<ssh|pai>` (defaults to ssh). The `-r <text>` flag is available on all except `alpha-auto`.
 
 ### Core Commands
 
@@ -102,15 +101,15 @@ All accept `--research-topic=<path>` and `--runner=<ssh|pai>` (required). The `-
 ### Leader Options
 
 ```
---research-topic PATH      Research topic file or inline text
+--topic PATH               Research topic file or inline text
 --blueprint PATH           Path to a research skill .md file
 --resume                   Resume the latest session
---resume-instruction TEXT  Instruction for the resumed session
+-r, --resume-instruction   Instruction for the resumed session
 --only-run-planning        Generate plan only, don't execute experiments
 --skip-permissions         Use permissive agent config (allow all tools)
 --no-human-in-the-loop     Fully autonomous role, no human review steps
                            (leader only; conflicts with --only-run-planning,
-                           --resume, and --resume-instruction)
+                           --resume, and -r)
 ```
 
 ## Architecture
@@ -263,84 +262,84 @@ alpha_auto_research/
 
 ```bash
 # Step 1: Generate a research plan (Leader reads the topic, designs experiments)
-alpha-rl-new-planning \
+alpha-new-plan \
     --runner=ssh \
-    --research-topic="research_topic/example_01_content_madness_detect.md"
+    --topic="research_topic/example_01_content_madness_detect.md"
 
 # Step 2: Review the generated plan, then confirm execution
-alpha-rl-begin-experiments \
+alpha-resume \
     --runner=ssh \
-    --research-topic="research_topic/example_01_content_madness_detect.md" \
-    --resume-instruction="permission granted, begin research"
+    --topic="research_topic/example_01_content_madness_detect.md" \
+    -r "permission granted, begin research"
 ```
 
 ### Iterative planning: refine before executing
 
 ```bash
 # Generate initial plan
-alpha-rl-new-planning \
+alpha-new-plan \
     --runner=ssh \
-    --research-topic="research_topic/example_02_kl_abl.md"
+    --topic="research_topic/example_02_kl_abl.md"
 
 # Refine the plan with specific instructions
-alpha-rl-resume-planning \
+alpha-resume-plan \
     --runner=ssh \
-    --research-topic="research_topic/example_02_kl_abl.md" \
-    --resume-instruction="max_env_worker: 64 -> 128, max_num_seqs->1024, revise your plan accordingly"
+    --topic="research_topic/example_02_kl_abl.md" \
+    -r "max_env_worker: 64 -> 128, max_num_seqs->1024, revise your plan accordingly"
 
 # Confirm execution
-alpha-rl-begin-experiments \
+alpha-resume \
     --runner=ssh \
-    --research-topic="research_topic/example_02_kl_abl.md" \
-    --resume-instruction="permission granted, begin research"
+    --topic="research_topic/example_02_kl_abl.md" \
+    -r "permission granted, begin research"
 ```
 
 ### Cloud execution with PAI DLC
 
 ```bash
-alpha-rl-new-planning \
+alpha-new-plan \
     --runner=pai \
-    --research-topic="research_topic/example_03_appworld.md"
+    --topic="research_topic/example_03_appworld.md"
 
-alpha-rl-resume-planning \
+alpha-resume-plan \
     --runner=pai \
-    --research-topic="research_topic/example_03_appworld.md" \
-    --resume-instruction="polish your plan"
+    --topic="research_topic/example_03_appworld.md" \
+    -r "polish your plan"
 
-alpha-rl-begin-experiments \
+alpha-resume \
     --runner=pai \
-    --research-topic="research_topic/example_03_appworld.md" \
-    --resume-instruction="permission granted, begin research"
+    --topic="research_topic/example_03_appworld.md" \
+    -r "permission granted, begin research"
 ```
 
 ### Resume and finalize reports
 
 ```bash
 # Resume a broken experiment with corrective instructions
-alpha-rl-new-planning \
+alpha-new-plan \
     --runner=ssh \
-    --research-topic="research_topic/example_02_kl_abl.md" \
-    --resume-instruction="Look at what you have done! Yaml is all wrong, refer to agentjet/ajet/default_config/ajet_default.yaml"
+    --topic="research_topic/example_02_kl_abl.md" \
+    -r "Look at what you have done! Yaml is all wrong, refer to agentjet/ajet/default_config/ajet_default.yaml"
 
 # Tell the leader to write the final report after experiments finish
-alpha-rl-resume-experiment \
+alpha-resume \
     --runner=pai \
-    --research-topic="research_topic/example_03_appworld.md" \
-    --resume-instruction="the experiment is finished, write report"
+    --topic="research_topic/example_03_appworld.md" \
+    -r "the experiment is finished, write report"
 
 # Customize report style
-alpha-rl-resume-planning \
+alpha-resume-plan \
     --runner=pai \
-    --research-topic="research_topic/example_03_appworld.md" \
-    --resume-instruction="use seaborn! show as many details as possible, write report in markdown format with figures included."
+    --topic="research_topic/example_03_appworld.md" \
+    -r "use seaborn! show as many details as possible, write report in markdown format with figures included."
 ```
 
 ### Fully autonomous (no human review)
 
 ```bash
-alpha-rl-new-research-no-human \
+alpha-auto \
     --runner=ssh \
-    --research-topic="research_topic/my_topic.md"
+    --topic="research_topic/my_topic.md"
 ```
 
 ### Job management
