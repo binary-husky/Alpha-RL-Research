@@ -6,3 +6,5 @@ kite-strings
 beast_logger
 commentjson
 psutil
+mkdocs
+mkdocs-material
