@@ -19,6 +19,7 @@ from pathlib import Path
 # Watchdog: if no new line arrives from opencode for this many seconds, kill it.
 _WATCHDOG_IDLE_TIMEOUT_SEC = 30 * 60
 from beast_logger import print_dict
+from alpha_auto_research.enums import Role, Runner
 from alpha_auto_research.utils.install_skills import install_skills
 from alpha_auto_research.utils.opencode_printer import format_json_line
 
@@ -32,12 +33,16 @@ _PACKAGE_DIR = Path(__file__).resolve().parent
 _RESEARCH_OPENCODE_JSON = Path.cwd() / "research_opencode.json"
 
 
-def _get_opencode_config(role) -> str:
-    """Return the opencode config path, preferring research_opencode.{role}.json if present."""
-    override = Path.cwd() / f"research_opencode.{role}.json"
-    if override.exists():
-        return str(override)
-    return str(Path.cwd() / "research_opencode.json")
+def _get_opencode_config(role: Role) -> tuple[str, str]:
+    """Return (config_path, model) for the opencode config, preferring research_opencode.{role}.json if present.
+
+    The model is read from the JSON's top-level "model" field.
+    """
+    override = Path.cwd() / f"research_opencode.{role.value}.json"
+    config_path = override if override.exists() else Path.cwd() / "research_opencode.json"
+    with open(config_path, "r") as f:
+        config_model = json.load(f)["model"]
+    return str(config_path), config_model
 
 
 def _load_research_opencode_config() -> None:
@@ -113,7 +118,7 @@ def _delete_opencode_session_from_title(title="") -> None:
 
 
 
-def run_opencode(role=None,
+def run_opencode(role: Role | None = None,
                  session_title=None,
                  opencode_web_url=None,
                  prompt=None,
@@ -127,6 +132,7 @@ def run_opencode(role=None,
     When starting a new session (not continue_mode), detects the newly created
     session ID right after the process spawns so it can be reused for resuming.
     """
+    config_path, config_model = _get_opencode_config(role)
 
     if continue_mode:
         assert session_title is None
@@ -144,16 +150,16 @@ def run_opencode(role=None,
         if need_permission_error_fix:
             msg += ", permission error detected, please try some workaround, e.g. tmux command."
 
-        cmd = ["opencode", "run", "--session", session_id, msg]
+        cmd = ["opencode", "run", "--model", config_model, "--session", session_id, msg]
 
     else:
         assert session_title is not None
         assert opencode_web_url is not None
         assert prompt is not None
-        cmd = ["opencode", "run", "--format", "json", "--title", session_title, prompt]
+        cmd = ["opencode", "run", "--model", config_model, "--format", "json", "--title", session_title, prompt]
 
 
-    env = {**os.environ, "OPENCODE_CONFIG": _get_opencode_config(role)}
+    env = {**os.environ, "OPENCODE_CONFIG": config_path}
 
     # Snapshot existing sessions before spawning so we can detect the new one
     existing_sessions = _get_opencode_sessions() if not continue_mode else {}
@@ -249,10 +255,11 @@ def run_opencode(role=None,
     return process.returncode, terminated_due_to_permission, detected_session_id
 
 
-def _ensure_opencode_web(role="leader"):
+def _ensure_opencode_web(role: Role = Role.LEADER):
     from alpha_auto_research.utils.smart_daemon import LaunchCommandWhenAbsent
+    config_path, config_model = _get_opencode_config(role)
 
-    env_dict = {**os.environ, "OPENCODE_CONFIG": _get_opencode_config(role)}
+    env_dict = {**os.environ, "OPENCODE_CONFIG": config_path}
 
     print("[controller message]: Starting opencode web...")
     opencode_web = LaunchCommandWhenAbsent(
@@ -273,7 +280,7 @@ def _ensure_opencode_web(role="leader"):
     api_key = remote_cfg.get("api_key")
     if remote_url and api_key:
         print(f"[controller message]: Starting kite-client -> {remote_url}")
-        command = ["kite-client", "--server", remote_url, "--apikey", api_key, "--map", f"4096:opencode_web_{role}"]
+        command = ["kite-client", "--server", remote_url, "--apikey", api_key, "--map", f"4096:opencode_web_{role.value}"]
         command_str = " ".join(command)
         kite = LaunchCommandWhenAbsent(
             full_argument_list=[command_str],
@@ -293,6 +300,27 @@ def _ensure_opencode_web(role="leader"):
 # ---------------------------------------------------------------------------
 # Leader role
 # ---------------------------------------------------------------------------
+
+def _handle_keyboard_interrupt() -> str | None:
+    """Prompt the user after Ctrl+C.
+
+    Returns None if the user wants to exit (typed [exit] or pressed Ctrl+C again);
+    otherwise returns their input to use as the next resume_instruction.
+    """
+    print()
+    print("[controller message]: Ctrl+C caught.")
+    print("[controller message]: To exit, type [exit] or press Ctrl+C again.")
+    print("[controller message]: Otherwise, type a message to send to the agent (will be used as resume_instruction).")
+    try:
+        user_input = input("> ")
+    except (KeyboardInterrupt, EOFError):
+        print()
+        return None
+    user_input = user_input.strip()
+    if user_input == "[exit]":
+        return None
+    return user_input
+
 
 def _should_continue(terminated_due_to_permission: bool, running_flag: str) -> bool:
     if terminated_due_to_permission:
@@ -330,32 +358,35 @@ def _check_ssh_connectivity() -> None:
         print(f"[controller message]: SSH connection to {label} OK.")
 
 
-def run(research_topic: str = "", blueprint:str="", role: str = "",
+def run(research_topic: str = "", blueprint: str = "", role: Role | str = Role.LEADER,
         resume_latest_session: bool = False, resume_instruction: str = "",
         only_run_planning: bool = False,
-        no_human_in_the_loop: bool = False, runner: str = "ssh") -> int:
+        no_human_in_the_loop: bool = False, runner: Runner | str = Runner.SSH) -> int:
+
+    role = Role(role)
+    runner = Runner(runner)
 
     _load_research_opencode_config()
 
     install_skills()
 
-    session_title = f"research_topic {research_topic} role {role} blueprint {blueprint}"
+    session_title = f"research_topic {research_topic} role {role.value} blueprint {blueprint}"
     session_title = session_title.replace(" ", "_")  # avoid issues with spaces in title
     session_title = session_title.replace("/", "_")  # avoid issues with spaces in title
     session_title = session_title.replace(".", "_")  # avoid issues with spaces in title
 
-    if runner == "ssh":
+    if runner is Runner.SSH:
         _check_ssh_connectivity()
 
     if only_run_planning:
-        assert role == "leader", "only_run_planning role is only applicable for leader role"
+        assert role is Role.LEADER, "only_run_planning role is only applicable for leader role"
 
     if no_human_in_the_loop:
-        assert role == "leader", "--no-human-in-the-loop is only applicable for leader role"
+        assert role is Role.LEADER, "--no-human-in-the-loop is only applicable for leader role"
         assert not only_run_planning, "--no-human-in-the-loop conflicts with --only-run-planning"
         assert not resume_latest_session, "--no-human-in-the-loop conflicts with --resume"
 
-    if role == "leader":
+    if role is Role.LEADER:
 
         leader_skill_path = str(_PACKAGE_DIR / "skills" / "leader_experiment" / "SKILL.md")
         assert os.path.exists(leader_skill_path), f"skill not found: {leader_skill_path}"
@@ -376,7 +407,7 @@ def run(research_topic: str = "", blueprint:str="", role: str = "",
 
         prompt = (
             "You are the main research agent, the research lead, responsible for designing, evaluating, and dispatching research plans.\n"
-            f"current runner is **{runner}** runner.\n"
+            f"current runner is **{runner.value}** runner.\n"
             f"---\n"
             f"Experiment skill (HUMAN-INTERACTION-WHEN-PLANNING={not no_human_in_the_loop}):"
             f"---\n"
@@ -401,7 +432,7 @@ def run(research_topic: str = "", blueprint:str="", role: str = "",
             prompt += "Additionally:\n"
             prompt += "The user wishes to only generate the research plan or report and exit without running the experiments.\n"
 
-    elif role == "worker":
+    elif role is Role.WORKER:
         worker_skill_path = str(_PACKAGE_DIR / "skills" / "worker_experiment" / "SKILL.md")
         worker_blueprint_path = os.path.abspath(blueprint)
         assert os.path.exists(worker_skill_path), f"skill not found: {worker_skill_path}"
@@ -414,11 +445,11 @@ def run(research_topic: str = "", blueprint:str="", role: str = "",
         prompt = (
             f"Your task is to follow the instructions in {worker_skill_path} and complete the experiment described in blueprint {worker_blueprint_path}.\n"
             f"After the experiment is finally complete, please delete {running_flag}.\n"
-            f"Current runner is **{runner}** runner.\n"
+            f"Current runner is **{runner.value}** runner.\n"
             f"Try everything you can to make the experiment running until reaching the time limit or completing the goal written in the blueprint.\n"
         )
 
-    if runner == "ssh":
+    if runner is Runner.SSH:
         prompt += "---\n"
         prompt += "Special warning: to run multiple experiments in parallel in same server, you need to arrange CUDA_VISIBLE_DEVICES for each experiment in experiment blueprint.\n"
 
@@ -457,7 +488,9 @@ def run(research_topic: str = "", blueprint:str="", role: str = "",
     # begin opencode agent
     while _should_continue(terminated_due_to_permission, running_flag):
         print("[controller message]: Continuing session ...")
-        if session_id:
+        if not session_id:
+            raise RuntimeError("No session ID detected to continue.")
+        try:
             returncode, terminated_due_to_permission, _ = run_opencode(
                 role=role,
                 session_title=None,
@@ -473,13 +506,17 @@ def run(research_topic: str = "", blueprint:str="", role: str = "",
             if only_run_planning:
                 print_dict({"end reason": "[controller message]: planning role, waiting user feedback (alpha-resume-plan or alpha-resume)."})
                 return returncode
-        else:
-            raise RuntimeError("No session ID detected to continue.")
 
-        print_dict({"end reason": "[controller message]: wait a few seconds before next round."})
-        time.sleep(60)  # wait a bit before checking the session status again
+            print_dict({"end reason": "[controller message]: wait a few seconds before next round."})
+            time.sleep(60)  # wait a bit before checking the session status again
+        except KeyboardInterrupt:
+            user_choice = _handle_keyboard_interrupt()
+            if user_choice is None:
+                print("[controller message]: Exiting on user request.")
+                return 130
+            resume_instruction = user_choice
 
-    if role == "worker" and runner == "api":
+    if role is Role.WORKER and runner is Runner.PAI:
         still_training = "/still_training"
         if os.path.exists(still_training):
             os.remove(still_training)
@@ -498,27 +535,32 @@ def main():
     subparsers = parser.add_subparsers(dest="role", required=True)
     from alpha_auto_research.config import config
     # Common arguments
-    for sp_name in ("leader", "worker"):
-        sp = subparsers.add_parser(sp_name)
+    for role_choice in Role:
+        sp = subparsers.add_parser(role_choice.value)
         sp.add_argument("--topic", "--research-topic", default="", dest="research_topic", help="Research topic or path to topic file")
-        sp.add_argument("--runner", default="ssh", choices=["ssh", "pai"], help="use ssh (default), or pai (alibaba cloud platform)")
+        sp.add_argument(
+            "--runner",
+            default=Runner.SSH.value,
+            choices=[r.value for r in Runner],
+            help="use ssh (default), or pai (alibaba cloud platform)",
+        )
         sp.add_argument("--blueprint", default="", help="Path to research skill .md")
         sp.add_argument("--resume", "--resume-latest-session", action="store_true", dest="resume_latest_session", help="Resume the latest session")
         sp.add_argument("-r", "--resume-instruction", default="", dest="resume_instruction", help="Instruction for resuming")
         sp.add_argument("--only-run-planning", action="store_true", help="Run once and exit")
-        if sp_name == "leader":
+        if role_choice is Role.LEADER:
             sp.add_argument("--no-human-in-the-loop", action="store_true", help="Run fully autonomous without human review (uses no_human skill)")
     args = parser.parse_args()
 
     rc = run(
         research_topic=args.research_topic,
         blueprint=args.blueprint,
-        role=args.role,
+        role=Role(args.role),
         resume_latest_session=args.resume_latest_session,
         resume_instruction=args.resume_instruction,
         only_run_planning=args.only_run_planning,
         no_human_in_the_loop=getattr(args, "no_human_in_the_loop", False),
-        runner=args.runner,
+        runner=Runner(args.runner),
     )
     sys.exit(rc)
 

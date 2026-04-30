@@ -7,11 +7,12 @@ argv to the main opencode_runner.
 
 import sys
 
+from alpha_auto_research.enums import Role
 from alpha_auto_research.opencode_runner import main as _main
 
 
 def _inject_and_run(extra_args: list[str]):
-    sys.argv = [sys.argv[0], "leader", *extra_args, *sys.argv[1:]]
+    sys.argv = [sys.argv[0], Role.LEADER.value, *extra_args, *sys.argv[1:]]
     _main()
 
 
@@ -41,5 +42,5 @@ def beta():
         print("Usage: beta <blueprint_path>")
         sys.exit(1)
     blueprint_path = sys.argv[1]
-    sys.argv = [sys.argv[0], "worker", "--blueprint", blueprint_path, *sys.argv[2:]]
+    sys.argv = [sys.argv[0], Role.WORKER.value, "--blueprint", blueprint_path, *sys.argv[2:]]
     _main()

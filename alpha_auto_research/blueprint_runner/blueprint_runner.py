@@ -10,12 +10,13 @@ Usage:
 import argparse
 
 from alpha_auto_research.blueprint_runner.base import get_runner
+from alpha_auto_research.enums import Runner
 
 
 def run_blueprint():
     parser = argparse.ArgumentParser()
     parser.add_argument('--blueprint', type=str, required=True, help='Path to the blueprint to run')
-    parser.add_argument('--runner', type=str, required=True, choices=['ssh', 'pai'], help='Backend runner type')
+    parser.add_argument('--runner', type=Runner, required=True, choices=list(Runner), help='Backend runner type')
     parser.add_argument('--acknowledge-max-parallel-capacity', type=int, required=True, help='Acknowledge the maximum parallel capacity before running the blueprint')
     args = parser.parse_args()
 

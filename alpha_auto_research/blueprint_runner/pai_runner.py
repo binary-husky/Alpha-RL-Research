@@ -10,6 +10,7 @@ import time
 from textwrap import dedent
 
 from alpha_auto_research.config import config
+from alpha_auto_research.enums import Role, Runner
 from alpha_auto_research.pai.client import create_job, wait_for_job, stop_job, delete_job, list_jobs
 from alpha_auto_research.blueprint_runner.base import ExperimentSubagent
 
@@ -35,7 +36,7 @@ class PaiExperimentSubagent(ExperimentSubagent):
             tmux send-keys -t "TRAIN" "export SETUPTOOLS_USE_DISTUTILS=local" Enter
             tmux send-keys -t "TRAIN" "export OPENCODE_EXPERIMENTAL_BASH_DEFAULT_TIMEOUT_MS=1800000" Enter
             sleep 5;
-            tmux send-keys -t "TRAIN" "python -m alpha_auto_research.opencode_runner worker --runner=pai --blueprint={blueprint_path}" Enter
+            tmux send-keys -t "TRAIN" "python -m alpha_auto_research.opencode_runner {Role.WORKER.value} --runner={Runner.PAI.value} --blueprint={blueprint_path}" Enter
             touch /still_training && while true; do [ -f "/still_training" ] || break; sleep 5; done
         """)
 

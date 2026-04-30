@@ -13,6 +13,7 @@ import argparse
 import time
 
 from alpha_auto_research.blueprint_runner.base import get_runner
+from alpha_auto_research.enums import Runner
 
 
 def main():
@@ -29,7 +30,7 @@ def main():
         help="Also delete the job(s) after stopping.",
     )
     parser.add_argument(
-        "--runner", type=str, required=True, choices=["ssh", "pai"],
+        "--runner", type=Runner, required=True, choices=list(Runner),
         help="Backend runner type.",
     )
     args = parser.parse_args()

@@ -4,6 +4,8 @@ Abstract base class for experiment launchers (blueprint runners).
 
 from abc import ABC, abstractmethod
 
+from alpha_auto_research.enums import Runner
+
 
 class ExperimentSubagent(ABC):
     """
@@ -38,14 +40,16 @@ class ExperimentSubagent(ABC):
         ...
 
 
-def get_runner(runner_type: str) -> ExperimentSubagent:
-    """Factory: return the runner for the given type ('pai' or 'ssh')."""
+def get_runner(runner_type: Runner | str) -> ExperimentSubagent:
+    """Factory: return the runner for the given Runner enum (or its string value)."""
 
-    if runner_type == "pai":
+    runner_type = Runner(runner_type)
+
+    if runner_type is Runner.PAI:
         from alpha_auto_research.blueprint_runner.pai_runner import PaiExperimentSubagent
         return PaiExperimentSubagent()
-    elif runner_type == "ssh":
+    elif runner_type is Runner.SSH:
         from alpha_auto_research.blueprint_runner.ssh_runner import SshExperimentSubagent
         return SshExperimentSubagent()
     else:
-        raise ValueError(f"Unknown runner type: {runner_type!r}. Expected 'pai' or 'ssh'.")
+        raise ValueError(f"Unknown runner type: {runner_type!r}.")
