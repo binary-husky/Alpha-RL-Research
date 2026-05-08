@@ -9,7 +9,7 @@ Here is a step-by-step guide on how to conduct the research, whenever you have d
     ```markdown
     .... previous progress ...
 
-    # Progress: 2026-04-01 10:00
+    # Progress: 2026-04-01 10:00 (update schedule 🧭)
 
     As the chief scientist, I have finished the blueprints, and next, I need to run the first blueprint's experiment (`blueprint_1.md`) myself for 5 minutes, to confirm that I'm not dispatching a blueprint with very stupid mistakes.
 
@@ -55,7 +55,7 @@ Here is a step-by-step guide on how to conduct the research, whenever you have d
     - If experiments continue, go back to [Step 5], `EXP_STAGE += 1`.
     - If experiments terminate:
         - Write the experiment report: `${subject_dir}/main_research_agent/final_report.md`.
-        - Generate charts from the experimental data and append to `final_report.md`. Please use seaborn to draw figures for best visual effects.
+        - Generate charts from the experimental data and append to `final_report.md`. Please use `seaborn` to draw figures for best visual effects.
         - Write analysis based on the figures and charts you have drawn.
         - Done, if you are instructed to delete a flag file, remember to delete it.
 
@@ -357,7 +357,7 @@ Note: remember to batch process. When possible, generate a batch of blueprints b
 
 ## How to Wait for Experiments to Complete:
 
-Every 10 minutes (sleep 600):
+Every 10 or 20 minutes (sleep 600 or 1200):
 - Check whether [exp_result_dir] contains a `finish.flag` file. If yes, the task is complete; otherwise, continue waiting.
 - Run `python -m alpha_auto_research.blueprint_runner.scan_jobs --runner=${runner}` to check the current blueprint status (Queuing / Running / Succeeded)
 - If some experiment is already completed while others are still running, let's not waste precious resource and submit new experiment blueprints to fill idle slots (if there are any more experiments need to be done in the next stage).
@@ -372,7 +372,23 @@ Every 10 minutes (sleep 600):
 - To also delete after stopping: add `--delete`
 - Warning: NEVER USE `tmux kill-server`! That is suicide, it will kill ALL tmux sessions on the server!
 
+# Writing Final Report
 
+Final report should be written in two languages: English and Chinese.
+You should consider your readers as LLM experts, they have basic knowledge about the LLM.
+Write in following sections:
+
+- TLDR
+- Introduction: what is the meaning and purpose of the experiment.
+- Hypothesis and Experiment Design
+- Results and Analysis
+- Conclusion
+
+And note that:
+- reader do not care how many stages of experiments are conducted, they do not care the details irrelevant to the research topic.
+- figures! the report must contain two types of figures:
+    - figures drawn from seaborn using experiment data
+    - figures generated from `alpha_auto_research/skills/banana_image/SKILL.md` to explain experiment design and hypothesis.
 
 
 # Warning

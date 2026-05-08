@@ -45,6 +45,26 @@ def _get_opencode_config(role: Role) -> tuple[str, str]:
     return str(config_path), config_model
 
 
+def _make_prompt_go_into_config_json_to_avoid_compaction(config_path: str, prompt: str) -> str:
+    """Write prompt to /tmp/prompt_{ts}.txt, copy config to /tmp with its
+    "instructions" field pointing to that file, and return the new config path.
+    """
+    timestamp = int(time.time())
+    prompt_file = f"/tmp/prompt_{timestamp}.txt"
+    with open(prompt_file, "w") as f:
+        f.write(prompt)
+
+    override_path = f"/tmp/opencode_config_{timestamp}.json"
+    with open(config_path, "r") as f:
+        config_data = json.load(f)
+    config_data["instructions"] = [prompt_file]
+    with open(override_path, "w") as f:
+        json.dump(config_data, f, indent=2)
+
+    prompt_dummy = "Let's begin."
+    return override_path, prompt_dummy
+
+
 def _load_research_opencode_config() -> None:
     """Set OPENCODE_CONFIG to research_opencode.json in current working directory.
 
@@ -156,7 +176,9 @@ def run_opencode(role: Role | None = None,
         assert session_title is not None
         assert opencode_web_url is not None
         assert prompt is not None
-        cmd = ["opencode", "run", "--model", config_model, "--format", "json", "--title", session_title, prompt]
+
+        config_path, prompt_dummy = _make_prompt_go_into_config_json_to_avoid_compaction(config_path, prompt)
+        cmd = ["opencode", "run", "--model", config_model, "--format", "json", "--title", session_title, prompt_dummy]
 
 
     env = {**os.environ, "OPENCODE_CONFIG": config_path}
@@ -407,6 +429,7 @@ def run(research_topic: str = "", blueprint: str = "", role: Role | str = Role.L
 
         prompt = (
             "You are the main research agent, the research lead, responsible for designing, evaluating, and dispatching research plans.\n"
+            "[permanent memory begin: never delete this part even in compaction]"
             f"current runner is **{runner.value}** runner.\n"
             f"---\n"
             f"Experiment skill (HUMAN-INTERACTION-WHEN-PLANNING={not no_human_in_the_loop}):"
@@ -417,6 +440,7 @@ def run(research_topic: str = "", blueprint: str = "", role: Role | str = Role.L
             f"---\n"
             f"{research_topic_text}\n"
             f"---\n"
+            "[permanent memory end]"
 
         )
 
@@ -442,11 +466,19 @@ def run(research_topic: str = "", blueprint: str = "", role: Role | str = Role.L
         with open(running_flag, "w+") as f:
             f.write("Running")
 
+        with open(worker_blueprint_path, "r") as f:
+            blueprint_content = f.read()
+
         prompt = (
-            f"Your task is to follow the instructions in {worker_skill_path} and complete the experiment described in blueprint {worker_blueprint_path}.\n"
+            f"Your task is to follow the instructions in {worker_skill_path} and complete the experiment described below.\n"
             f"After the experiment is finally complete, please delete {running_flag}.\n"
             f"Current runner is **{runner.value}** runner.\n"
             f"Try everything you can to make the experiment running until reaching the time limit or completing the goal written in the blueprint.\n"
+            f"---\n"
+            f"Blueprint ({worker_blueprint_path}):\n"
+            f"---\n"
+            f"{blueprint_content}\n"
+            f"---\n"
         )
 
     if runner is Runner.SSH:
@@ -468,17 +500,26 @@ def run(research_topic: str = "", blueprint: str = "", role: Role | str = Role.L
     else:
         # delete existing session with the same title to avoid confusion
         _delete_opencode_session_from_title(title=session_title)
-        returncode, terminated_due_to_permission, session_id = run_opencode(
-            role=role,
-            session_title=session_title,
-            opencode_web_url="http://localhost:4096",
-            prompt=prompt,
-            continue_mode=False,
-            session_id=None,
-            need_permission_error_fix=False,
-            resume_instruction="",
-            research_topic=research_topic
-        )
+        try:
+            returncode, terminated_due_to_permission, session_id = run_opencode(
+                role=role,
+                session_title=session_title,
+                opencode_web_url="http://localhost:4096",
+                prompt=prompt,
+                continue_mode=False,
+                session_id=None,
+                need_permission_error_fix=False,
+                resume_instruction="",
+                research_topic=research_topic
+            )
+        except KeyboardInterrupt:
+            user_choice = _handle_keyboard_interrupt()
+            if user_choice is None:
+                print("[controller message]: Exiting on user request.")
+                return 130
+            resume_instruction = user_choice
+            terminated_due_to_permission = False
+
         print(f"[controller message]: Session ID from first run: {session_id}")
         if only_run_planning:
             print_dict({"end reason": "[controller message]: planning role, waiting user feedback (alpha-resume-plan or alpha-resume)."})
@@ -515,6 +556,7 @@ def run(research_topic: str = "", blueprint: str = "", role: Role | str = Role.L
                 print("[controller message]: Exiting on user request.")
                 return 130
             resume_instruction = user_choice
+            terminated_due_to_permission = False
 
     if role is Role.WORKER and runner is Runner.PAI:
         still_training = "/still_training"

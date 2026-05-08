@@ -3,9 +3,9 @@
 # clone code
 git clone https://github.com/modelscope/AgentJet.git codebase/agentjet
 
-alpha-new-plan \
+alpha-auto \
     --runner=pai \
-    --topic="research_topic/example_11_aime.md"
+    --topic="research_topic/example_13_aime_kl_in_reward_study.md"
 
 alpha-resume-plan \
     --runner=pai \
