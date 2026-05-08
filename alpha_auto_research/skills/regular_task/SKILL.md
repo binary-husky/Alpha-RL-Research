@@ -1,6 +1,9 @@
-Do Not Terminate Without Careful Consideration
+1. Do Not Terminate Without Careful Consideration
+2. Run important commands in tmux sessions, and monitor them with `tmux_wait.py` to detect errors early and save time.
+3. Always use `python ./tmux_wait.py` instead of `sleep` to wait before checking tmux content, so that you can detect errors early and avoid wasting time.
+4. tmux session names must use prefix `ajet_worker_*`
 
-## Experiment Monitoring Skill
+## Service Monitoring Skill
 
 ```
     ---
