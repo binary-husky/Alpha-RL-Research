@@ -55,6 +55,7 @@ def _run_cmd(host_cfg: dict, remote_cmd: str) -> subprocess.CompletedProcess:
         cmd += ["-p", str(host_cfg["port"])]
     cmd.append(f"{host_cfg.get('user', 'root')}@{host_cfg['host']}")
     cmd.append(remote_cmd)
+    print(f"Running command on {host_cfg['host']}: {' '.join(cmd)}")
     return subprocess.run(cmd, capture_output=True, text=True)
 
 

@@ -26,6 +26,7 @@ alpha_auto_research = ["skills/*.md"]
 
 [project.scripts]
 alpha-rl-research = "alpha_auto_research.opencode_runner:main"
+opencode-runner = "alpha_auto_research.opencode_runner:main"
 alpha-run-blueprint = "alpha_auto_research.blueprint_runner.blueprint_runner:run_blueprint"
 alpha-scan-jobs = "alpha_auto_research.blueprint_runner.scan_jobs:main"
 alpha-stop-jobs = "alpha_auto_research.blueprint_runner.stop_jobs:main"

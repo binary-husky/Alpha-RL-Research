@@ -4,6 +4,16 @@ Unified OpenCode agent runner — supports both leader and worker modes.
 Leader role:  Orchestrates research via a blueprint, manages a running_flag file.
 Worker role:  Runs inside a PAI DLC node, checks tmux session liveness.
 
+Running leader:
+    opencode_runner leader --topic "research topic" --blueprint /path/to/blueprint.md
+    opencode_runner leader --topic /path/to/topic.txt --blueprint /path/to/blueprint.md
+    opencode_runner leader --topic "research topic" --customized-leader-skill-file /path/to/skill.md
+    opencode_runner leader --topic "research topic" --only-run-planning
+    opencode_runner leader --topic "research topic" --no-human-in-the-loop
+
+Running worker:
+    opencode_runner worker --blueprint /path/to/blueprint.md
+    opencode_runner worker --blueprint /path/to/blueprint.md --customized-worker-skill-file /path/to/skill.md
 """
 
 import argparse
@@ -18,7 +28,7 @@ from pathlib import Path
 
 # Watchdog: if no new line arrives from opencode for this many seconds, kill it.
 _WATCHDOG_IDLE_TIMEOUT_SEC = 30 * 60
-from beast_logger import print_dict
+from beast_logger import print_dict, print_listofdict
 from alpha_auto_research.enums import Role, Runner
 from alpha_auto_research.utils.install_skills import install_skills
 from alpha_auto_research.utils.opencode_printer import format_json_line
@@ -65,18 +75,20 @@ def _make_prompt_go_into_config_json_to_avoid_compaction(config_path: str, promp
     return override_path, prompt_dummy
 
 
-def _load_research_opencode_config() -> None:
+def _load_research_opencode_config(role: Role) -> None:
     """Set OPENCODE_CONFIG to research_opencode.json in current working directory.
 
     Raises FileNotFoundError if research_opencode.json does not exist.
     """
-    if not _RESEARCH_OPENCODE_JSON.exists():
+    override = Path.cwd() / f"research_opencode.{role.value}.json"
+    config_path = override if override.exists() else Path.cwd() / "research_opencode.json"
+    if not config_path.exists():
         raise FileNotFoundError(
             f"research_opencode.json not found in current working directory ({Path.cwd()}). "
             f"Please create it (see research_opencode.example.json for reference)."
         )
-    os.environ["OPENCODE_CONFIG"] = str(_RESEARCH_OPENCODE_JSON)
-    print_dict({"OPENCODE_CONFIG": str(_RESEARCH_OPENCODE_JSON)}, header="Loaded research_opencode.json")
+    os.environ["OPENCODE_CONFIG"] = str(config_path)
+    print_dict({"OPENCODE_CONFIG": str(config_path)}, header="Loaded research_opencode.json")
 
 
 # ---------------------------------------------------------------------------
@@ -365,6 +377,7 @@ def _check_ssh_connectivity() -> None:
     _setup_localhost_ssh()
 
     hosts = config.get("ssh", {}).get("hosts", [])
+    print_listofdict(hosts)
     if not hosts:
         print("[controller message]: WARNING: runner is 'ssh' but no hosts configured.")
         return
@@ -383,12 +396,14 @@ def _check_ssh_connectivity() -> None:
 def run(research_topic: str = "", blueprint: str = "", role: Role | str = Role.LEADER,
         resume_latest_session: bool = False, resume_instruction: str = "",
         only_run_planning: bool = False,
-        no_human_in_the_loop: bool = False, runner: Runner | str = Runner.SSH) -> int:
+        no_human_in_the_loop: bool = False, runner: Runner | str = Runner.SSH,
+        customized_worker_skill_file: str = "",
+        customized_leader_skill_file: str = "") -> int:
 
     role = Role(role)
     runner = Runner(runner)
 
-    _load_research_opencode_config()
+    _load_research_opencode_config(role)
 
     install_skills()
 
@@ -410,7 +425,7 @@ def run(research_topic: str = "", blueprint: str = "", role: Role | str = Role.L
 
     if role is Role.LEADER:
 
-        leader_skill_path = str(_PACKAGE_DIR / "skills" / "leader_experiment" / "SKILL.md")
+        leader_skill_path = customized_leader_skill_file if customized_leader_skill_file else str(_PACKAGE_DIR / "skills" / "leader_experiment" / "SKILL.md")
         assert os.path.exists(leader_skill_path), f"skill not found: {leader_skill_path}"
 
         if os.path.exists(research_topic):
@@ -457,7 +472,7 @@ def run(research_topic: str = "", blueprint: str = "", role: Role | str = Role.L
             prompt += "The user wishes to only generate the research plan or report and exit without running the experiments.\n"
 
     elif role is Role.WORKER:
-        worker_skill_path = str(_PACKAGE_DIR / "skills" / "worker_experiment" / "SKILL.md")
+        worker_skill_path = customized_worker_skill_file if customized_worker_skill_file else str(_PACKAGE_DIR / "skills" / "worker_experiment" / "SKILL.md")
         worker_blueprint_path = os.path.abspath(blueprint)
         assert os.path.exists(worker_skill_path), f"skill not found: {worker_skill_path}"
         assert os.path.exists(worker_blueprint_path), f"blueprint not found: {worker_blueprint_path}"
@@ -590,6 +605,8 @@ def main():
         sp.add_argument("--resume", "--resume-latest-session", action="store_true", dest="resume_latest_session", help="Resume the latest session")
         sp.add_argument("-r", "--resume-instruction", default="", dest="resume_instruction", help="Instruction for resuming")
         sp.add_argument("--only-run-planning", action="store_true", help="Run once and exit")
+        sp.add_argument("--customized-worker-skill-file", default="", dest="customized_worker_skill_file", help="Custom worker skill file path (replaces default worker_skill_path)")
+        sp.add_argument("--customized-leader-skill-file", default="", dest="customized_leader_skill_file", help="Custom leader skill file path (replaces default leader_skill_path)")
         if role_choice is Role.LEADER:
             sp.add_argument("--no-human-in-the-loop", action="store_true", help="Run fully autonomous without human review (uses no_human skill)")
     args = parser.parse_args()
@@ -603,6 +620,8 @@ def main():
         only_run_planning=args.only_run_planning,
         no_human_in_the_loop=getattr(args, "no_human_in_the_loop", False),
         runner=Runner(args.runner),
+        customized_worker_skill_file=args.customized_worker_skill_file,
+        customized_leader_skill_file=args.customized_leader_skill_file,
     )
     sys.exit(rc)
 
